@@ -1,0 +1,89 @@
+{
+  "projectType": "saas",
+  "projectName": "Cluely",
+  "projectDescription": "An invisible AI-powered desktop assistant that provides real-time insights, answers, and support during meetings, interviews, and presentations",
+  "theme": "palm",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4f46e5",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/screenshot-analysis",
+              "features/ai-chat",
+              "features/audio-intelligence",
+              "features/keyboard-shortcuts"
+            ]
+          },
+          {
+            "group": "AI Providers",
+            "pages": [
+              "ai-providers/overview",
+              "ai-providers/gemini",
+              "ai-providers/ollama",
+              "ai-providers/openrouter",
+              "ai-providers/k2-think"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/configuration",
+              "guides/privacy-security",
+              "guides/troubleshooting",
+              "guides/use-cases"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/architecture",
+              "development/building",
+              "development/contributing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Invisible always-on-top AI assistant window",
+    "Screenshot capture and AI-powered analysis",
+    "Multiple AI provider support (Gemini, Ollama, OpenRouter, K2 Think)",
+    "Audio file processing and transcription",
+    "Contextual AI chat with conversation history",
+    "Privacy-first design with local AI option (Ollama)",
+    "Global keyboard shortcuts for quick access",
+    "Cross-platform support (Windows, macOS, Linux)",
+    "System tray integration",
+    "Automatic screenshot cleanup"
+  ],
+  "publicApiSurface": [
+    "Window Management: createWindow(), toggleMainWindow(), hideMainWindow(), showMainWindow()",
+    "Screenshot Operations: takeScreenshot(), deleteScreenshot(), getImagePreview()",
+    "AI Processing: processingHelper.processInitialSolution(), processingHelper.processDebugSolution()",
+    "IPC Handlers: screenshot-taken, solution-start, problem-extracted, unauthorized, reset-view",
+    "Keyboard Shortcuts: Cmd/Ctrl+B (toggle), Cmd/Ctrl+H (screenshot), Cmd/Enter (solution), Arrow keys (move window)",
+    "Configuration: GEMINI_API_KEY, USE_OLLAMA, OLLAMA_MODEL, OPENROUTER_API_KEY, K2_THINK_API_KEY",
+    "LLM Methods: generateText(), generateWithVision(), transcribeAudio()",
+    "App State: view (queue/solutions), problemInfo, screenshotQueue, extraScreenshotQueue"
+  ]
+}

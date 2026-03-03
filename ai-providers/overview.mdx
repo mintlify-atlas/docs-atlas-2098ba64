@@ -1,0 +1,136 @@
+---
+title: AI Providers Overview
+description: Compare AI providers and choose the best option for your needs
+---
+
+Cluely supports multiple AI providers, each with unique advantages. Choose based on your priorities: privacy, cost, performance, or specialized capabilities.
+
+## Available Providers
+
+<CardGroup cols={2}>
+  <Card title="Google Gemini" icon="google" href="/ai-providers/gemini">
+    Latest AI with vision capabilities and fastest responses
+  </Card>
+  <Card title="Ollama" icon="server" href="/ai-providers/ollama">
+    100% private local AI - data never leaves your computer
+  </Card>
+  <Card title="OpenRouter" icon="router" href="/ai-providers/openrouter">
+    Access multiple AI models through a unified API
+  </Card>
+  <Card title="K2 Think V2" icon="brain" href="/ai-providers/k2-think">
+    High-reasoning AI with advanced problem-solving capabilities
+  </Card>
+</CardGroup>
+
+## Quick Comparison
+
+| Feature | Gemini | Ollama | OpenRouter | K2 Think V2 |
+|---------|--------|--------|------------|-------------|
+| **Privacy** | Cloud | 100% Local | Cloud | Cloud |
+| **Cost** | API costs | Free | API costs | API costs |
+| **Speed** | Very Fast | Fast | Fast | Moderate |
+| **Offline** | No | Yes | No | No |
+| **Vision** | Native | Limited | Model-dependent | OCR-based |
+| **Reasoning** | Excellent | Good | Varies | Advanced |
+
+## When to Use Each Provider
+
+### Choose Gemini If:
+- You need the fastest, most accurate responses
+- Vision capabilities (image analysis) are essential
+- You're comfortable with cloud-based processing
+- You want the latest AI technology
+
+### Choose Ollama If:
+- Privacy is your top priority
+- You want zero API costs
+- You need offline functionality
+- You have sufficient local compute resources (8GB+ RAM recommended)
+
+### Choose OpenRouter If:
+- You want flexibility to switch between multiple models
+- You prefer a unified API for different providers
+- You want to experiment with various AI models
+
+### Choose K2 Think V2 If:
+- You need advanced reasoning capabilities
+- Complex problem-solving is your primary use case
+- You're working on high-level analytical tasks
+
+## Provider Capabilities
+
+<Tabs>
+  <Tab title="Screenshot Analysis">
+    **Gemini**: Native vision capabilities with direct image processing
+    
+    **Ollama**: Limited - text extraction only
+    
+    **OpenRouter**: Depends on selected model (e.g., GPT-4 Vision)
+    
+    **K2 Think V2**: Uses free local OCR (Tesseract.js) to extract text from images
+  </Tab>
+  
+  <Tab title="Audio Processing">
+    **Gemini**: Native audio analysis and transcription
+    
+    **Ollama**: Not supported
+    
+    **OpenRouter**: Not supported in Cluely
+    
+    **K2 Think V2**: Not supported
+    
+    <Note>
+      Voice features always use Gemini, even when other providers are configured for text.
+    </Note>
+  </Tab>
+  
+  <Tab title="Chat & Text">
+    All providers support text-based chat and conversation.
+    
+    Performance varies by model selection and configuration.
+  </Tab>
+</Tabs>
+
+## Switching Providers
+
+Cluely allows you to switch between providers at runtime:
+
+```typescript
+// Switch to Gemini
+await llmHelper.switchToGemini(apiKey, model)
+
+// Switch to Ollama
+await llmHelper.switchToOllama(model, url)
+
+// Switch to OpenRouter
+await llmHelper.switchToOpenRouter(apiKey, model)
+
+// Switch to K2 Think V2
+await llmHelper.switchToK2Think(apiKey, model)
+```
+
+<Warning>
+  When switching providers, ensure the target provider is properly configured with API keys or local services running.
+</Warning>
+
+## Cost Considerations
+
+### Free Options
+- **Ollama**: Completely free, runs locally
+- **Gemini**: Free tier available (limited requests)
+
+### Paid Options
+- **Gemini**: Pay-per-use pricing (see [Google AI Studio](https://makersuite.google.com/app/apikey))
+- **OpenRouter**: Varies by model selected
+- **K2 Think V2**: API pricing applies
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Set Up Gemini" icon="google" href="/ai-providers/gemini">
+    Configure Google Gemini for cloud-based AI
+  </Card>
+  <Card title="Set Up Ollama" icon="server" href="/ai-providers/ollama">
+    Install and configure local AI with Ollama
+  </Card>
+</CardGroup>

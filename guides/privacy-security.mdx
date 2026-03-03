@@ -1,0 +1,395 @@
+---
+title: Privacy & Security
+description: Privacy features, local vs cloud AI options, and data handling in Cluely
+---
+
+## Privacy-First Design
+
+Cluely is built with privacy as a core principle. You have complete control over your data and can choose between local and cloud AI processing.
+
+## Local vs Cloud AI
+
+<Tabs>
+  <Tab title="Ollama (100% Private)">
+    ### Complete Local Processing
+
+    When using Ollama, **all data stays on your computer**:
+
+    - Screenshots never leave your device
+    - No internet connection required for AI processing
+    - No API keys or cloud services
+    - No usage tracking or telemetry
+
+    **Setup for maximum privacy:**
+
+    ```env
+    USE_OLLAMA=true
+    OLLAMA_MODEL=llama3.2
+    OLLAMA_URL=http://localhost:11434
+    ```
+
+    **Privacy benefits:**
+    - ✅ Zero data transmission to external servers
+    - ✅ Works completely offline
+    - ✅ No API costs or usage limits
+    - ✅ Full control over AI model and data
+    - ✅ Compliant with strict privacy regulations
+
+    <Info>
+      Recommended for: Sensitive work, confidential meetings, regulated industries, or anyone prioritizing privacy.
+    </Info>
+  </Tab>
+
+  <Tab title="Cloud AI (Google Gemini)">
+    ### Cloud Processing Trade-offs
+
+    When using Google Gemini, data is sent to Google servers:
+
+    **What gets sent:**
+    - Screenshot images (as base64-encoded PNG)
+    - Audio files (as base64-encoded MP3)
+    - Chat messages and prompts
+
+    **Google's data handling:**
+    - Subject to Google's [privacy policy](https://policies.google.com/privacy)
+    - May be used to improve Google's services
+    - Transmitted over HTTPS encrypted connections
+
+    **When to use Gemini:**
+    - ✅ Need latest AI technology and best accuracy
+    - ✅ Want fastest response times
+    - ✅ Require advanced vision and audio analysis
+    - ✅ Working with non-sensitive content
+
+    <Warning>
+      Do not use cloud AI for confidential information, trade secrets, personal data, or content subject to privacy regulations.
+    </Warning>
+  </Tab>
+
+  <Tab title="K2 Think (Hybrid Privacy)">
+    ### Local OCR + Cloud Reasoning
+
+    K2 Think provides a hybrid approach:
+
+    **Privacy features:**
+    1. Screenshots are processed locally using Tesseract.js OCR
+    2. Only extracted text (not images) is sent to K2 Think API
+    3. Reduces data exposure compared to sending full images
+
+    **Implementation:**
+
+    ```typescript
+    // From electron/LLMHelper.ts:359-374
+    const ocrResults = await Promise.all(
+      imagePaths.map(path => Tesseract.recognize(path, 'eng'))
+    )
+    const extractedText = ocrResults.map(r => r.data.text).join("\n---\n")
+
+    // Only text is sent to K2 Think API
+    const result = await this.callK2Think(prompt + extractedText)
+    ```
+
+    **Privacy level:** Medium
+    - ✅ Images never sent to cloud
+    - ✅ Local OCR processing
+    - ⚠️ Extracted text sent to K2 Think servers
+    - ⚠️ May still contain sensitive information
+  </Tab>
+
+  <Tab title="OpenRouter">
+    ### Third-Party API Gateway
+
+    OpenRouter acts as a gateway to multiple AI providers:
+
+    **Data flow:**
+    1. Request sent to OpenRouter API
+    2. OpenRouter forwards to selected model provider
+    3. Response returned through OpenRouter
+
+    **Privacy considerations:**
+    - Data passes through OpenRouter infrastructure
+    - Subject to both OpenRouter and model provider policies
+    - No image analysis support (text prompts only)
+
+    <Warning>
+      Review [OpenRouter's privacy policy](https://openrouter.ai/privacy) and your selected model provider's policy.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Screenshot Privacy
+
+### Automatic Cleanup
+
+Screenshots are automatically managed to prevent accumulation of sensitive data:
+
+```typescript
+// From electron/ScreenshotHelper.ts:54-75
+public clearQueues(): void {
+  // Clear screenshotQueue
+  this.screenshotQueue.forEach((screenshotPath) => {
+    fs.unlink(screenshotPath, (err) => {
+      if (err) console.error(`Error deleting screenshot`, err)
+    })
+  })
+  this.screenshotQueue = []
+
+  // Clear extraScreenshotQueue
+  this.extraScreenshotQueue.forEach((screenshotPath) => {
+    fs.unlink(screenshotPath, (err) => {
+      if (err) console.error(`Error deleting extra screenshot`, err)
+    })
+  })
+  this.extraScreenshotQueue = []
+}
+```
+
+**Cleanup triggers:**
+- When clearing queues manually
+- When queue exceeds 5 screenshots (oldest deleted automatically)
+- When deleting individual screenshots
+
+### Storage Locations
+
+Screenshots are stored locally in your user data directory:
+
+```bash
+# macOS
+~/Library/Application Support/interview-coder/screenshots/
+~/Library/Application Support/interview-coder/extra_screenshots/
+
+# Windows
+%APPDATA%/interview-coder/screenshots/
+%APPDATA%/interview-coder/extra_screenshots/
+
+# Linux
+~/.config/interview-coder/screenshots/
+~/.config/interview-coder/extra_screenshots/
+```
+
+<Accordion title="Why two screenshot directories?">
+  Cluely has two screenshot queues:
+  - **Primary queue** (`screenshots/`): For initial problem screenshots
+  - **Extra queue** (`extra_screenshots/`): For debug and follow-up screenshots
+
+  Each queue maintains up to 5 screenshots independently.
+</Accordion>
+
+### Manual Screenshot Deletion
+
+Delete screenshots at any time:
+
+```typescript
+const result = await appState.deleteScreenshot(screenshotPath)
+if (result.success) {
+  console.log('Screenshot deleted from disk')
+}
+```
+
+## Data Handling
+
+### No Telemetry or Tracking
+
+Cluely does **not** collect:
+- ❌ Usage analytics
+- ❌ Error reports
+- ❌ User behavior tracking
+- ❌ Personal information
+- ❌ Screenshot content (when using Ollama)
+
+### What Data is Stored
+
+**Local storage only:**
+- Screenshots (temporary, auto-deleted)
+- Application preferences
+- Screenshot metadata (questions attached to screenshots)
+- Window position and size
+
+**Stored in:** `app.getPath("userData")` directory
+
+**Not stored:**
+- API responses
+- Chat history (beyond current session)
+- Conversation context after app closes
+
+### API Key Security
+
+<Steps>
+  <Step title="Never commit .env files">
+    Your `.env` file contains API keys and should **never** be committed to version control.
+
+    ```bash
+    # .gitignore already includes
+    .env
+    .env.local
+    .env.*.local
+    ```
+  </Step>
+
+  <Step title="Use environment variables">
+    API keys are read from environment variables at runtime:
+
+    ```typescript
+    // From electron/LLMHelper.ts:42-44
+    this.geminiApiKey = (apiKey ?? "").trim() || 
+                        process.env.GEMINI_API_KEY?.trim() || ""
+    this.fallbackGeminiApiKey = process.env.GEMINI_FALLBACK_API_KEY?.trim() || ""
+    ```
+  </Step>
+
+  <Step title="Rotate keys if exposed">
+    If you accidentally expose an API key:
+    1. Immediately revoke it in the provider's console
+    2. Generate a new key
+    3. Update your `.env` file
+    4. Restart Cluely
+  </Step>
+</Steps>
+
+## Network Security
+
+### HTTPS Connections
+
+All cloud API communications use HTTPS:
+
+```typescript
+// OpenRouter
+const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  headers: {
+    'Authorization': `Bearer ${this.openRouterApiKey}`,
+  }
+})
+
+// K2 Think
+const response = await fetch("https://api.k2think.ai/v1/chat/completions", {
+  headers: {
+    'Authorization': `Bearer ${this.k2ThinkApiKey}`,
+  }
+})
+```
+
+### Localhost-Only for Ollama
+
+Ollama runs on `localhost:11434` by default:
+
+```typescript
+private ollamaUrl: string = "http://localhost:11434"
+```
+
+<Info>
+  The Ollama endpoint is only accessible from your local machine. No network exposure by default.
+</Info>
+
+## Privacy Recommendations
+
+### For Maximum Privacy
+
+<Steps>
+  <Step title="Use Ollama exclusively">
+    ```env
+    USE_OLLAMA=true
+    OLLAMA_MODEL=llama3.2
+    ```
+    No data leaves your computer.
+  </Step>
+
+  <Step title="Regularly clear screenshots">
+    Manually delete screenshots after use or let auto-cleanup handle it.
+  </Step>
+
+  <Step title="Review screenshot content">
+    Before taking screenshots, ensure they don't contain:
+    - Passwords or credentials
+    - Personal identifiable information (PII)
+    - Confidential business data
+    - Financial information
+  </Step>
+
+  <Step title="Use dedicated profile">
+    Run Cluely in a separate user profile for work vs personal use.
+  </Step>
+</Steps>
+
+### For Regulated Industries
+
+If you work in healthcare, finance, legal, or other regulated industries:
+
+<Warning>
+  **Only use Ollama (local AI) for any sensitive or regulated content.**
+
+  Cloud AI providers may not be compliant with:
+  - HIPAA (healthcare)
+  - GDPR (EU privacy)
+  - SOC 2 (security)
+  - PCI DSS (payment data)
+  - Attorney-client privilege
+</Warning>
+
+## Auditing and Transparency
+
+### Open Source Verification
+
+Cluely is open source - you can verify privacy claims:
+
+**Review data handling:**
+- `electron/LLMHelper.ts` - AI provider interactions
+- `electron/ScreenshotHelper.ts` - Screenshot management
+- `electron/main.ts` - Application initialization
+
+**No hidden telemetry:**
+
+Search the codebase for tracking:
+
+```bash
+grep -r "analytics\|telemetry\|tracking" electron/
+# Returns no results - no tracking code
+```
+
+### Network Monitoring
+
+You can monitor Cluely's network activity:
+
+```bash
+# macOS - Monitor network connections
+lsof -i -P | grep "Interview Coder"
+
+# Linux - Use tcpdump
+sudo tcpdump -i any host localhost
+```
+
+**With Ollama:** You'll only see localhost connections
+**With Cloud AI:** You'll see HTTPS connections to AI provider endpoints
+
+## Frequently Asked Questions
+
+<Accordion title="Can screenshots be recovered after deletion?">
+  Screenshots are permanently deleted using `fs.unlink()`. They may be recoverable with data recovery tools until the disk space is overwritten.
+
+  For complete deletion, use secure deletion tools or encrypt your disk.
+</Accordion>
+
+<Accordion title="Does Cluely store conversation history?">
+  No. Conversation context only exists during the current session in memory. Nothing is persisted after the app closes.
+</Accordion>
+
+<Accordion title="Can I use Cluely in airplane mode?">
+  Yes, if you use Ollama. The app works completely offline with local AI models.
+
+  Cloud AI providers (Gemini, OpenRouter, K2 Think) require internet connectivity.
+</Accordion>
+
+<Accordion title="Is my Gemini API key secure?">
+  API keys are stored in your `.env` file and loaded into memory at runtime. They are never transmitted except to authenticate with the respective AI provider.
+
+  Keep your `.env` file secure with file system permissions:
+  ```bash
+  chmod 600 .env
+  ```
+</Accordion>
+
+<Accordion title="What happens if I accidentally screenshot sensitive data?">
+  1. Immediately delete the screenshot from Cluely's interface
+  2. Clear the screenshot directories manually if needed
+  3. If using cloud AI, data was already sent to the provider
+  4. Use Ollama to prevent this in the future
+</Accordion>

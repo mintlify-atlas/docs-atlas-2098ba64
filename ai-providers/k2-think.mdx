@@ -1,0 +1,415 @@
+---
+title: K2 Think V2 Setup
+description: Configure K2 Think V2 for advanced reasoning and high-level problem solving
+---
+
+K2 Think V2 (MBZUAI-IFM/K2-Think-v2) is a specialized AI model focused on advanced reasoning capabilities. It uses local OCR for image processing to minimize costs while maintaining strong analytical abilities.
+
+## Features
+
+- **Advanced Reasoning**: Optimized for complex problem-solving
+- **Cost-Effective Vision**: Uses free local OCR (Tesseract.js) instead of expensive vision APIs
+- **High-Level Analysis**: Excellent for analytical and technical tasks
+- **ChatGPT-Compatible API**: Standard OpenAI-compatible endpoint
+
+## Setup
+
+<Steps>
+  <Step title="Get API Key">
+    Obtain your K2 Think API key from the K2 Think service provider.
+    
+    <Note>
+      K2 Think uses a specialized API endpoint separate from OpenAI or other providers.
+    </Note>
+  </Step>
+  
+  <Step title="Configure Environment">
+    Add K2 Think settings to your `.env` file:
+    
+    ```env
+    K2_THINK_API_KEY=your_k2_think_api_key_here
+    USE_K2_THINK=true
+    ```
+    
+    <Warning>
+      Set `USE_K2_THINK=true` to enable K2 Think mode. Otherwise, it won't activate even with the API key.
+    </Warning>
+  </Step>
+  
+  <Step title="Verify Configuration">
+    Start Cluely and check the console:
+    
+    ```bash
+    [LLMHelper] Using K2 Think V2 with model: MBZUAI-IFM/K2-Think-v2
+    ```
+  </Step>
+</Steps>
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|--------|
+| `K2_THINK_API_KEY` | Yes | Your K2 Think API key | - |
+| `USE_K2_THINK` | Yes | Enable K2 Think mode | `false` |
+
+### Default Model
+
+Cluely uses the K2-Think-v2 model:
+
+```typescript
+// K2 Think model (source/electron/LLMHelper.ts:35)
+private k2ThinkModel: string = "MBZUAI-IFM/K2-Think-v2"
+```
+
+<Note>
+  The model name is fixed in the current implementation. Custom model selection will be added in future versions.
+</Note>
+
+## API Implementation
+
+### Endpoint
+
+K2 Think uses this API endpoint:
+
+```
+POST https://api.k2think.ai/v1/chat/completions
+```
+
+### Request Configuration
+
+```typescript
+// K2 Think API call (source/electron/LLMHelper.ts:282-298)
+const response = await fetch("https://api.k2think.ai/v1/chat/completions", {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${this.k2ThinkApiKey}`,
+    'accept': 'application/json',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: this.k2ThinkModel,
+    messages: [
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    stream: false
+  }),
+})
+```
+
+### Headers
+
+| Header | Value | Purpose |
+|--------|-------|--------|
+| `Authorization` | `Bearer {API_KEY}` | Authentication |
+| `accept` | `application/json` | Response format |
+| `Content-Type` | `application/json` | Request format |
+
+## Local OCR for Images
+
+<Note>
+  K2 Think uses **free local OCR** (Tesseract.js) to extract text from images before analysis. This eliminates vision API costs.
+</Note>
+
+### How It Works
+
+<Steps>
+  <Step title="Screenshot Capture">
+    User takes a screenshot using Cluely's hotkey (`Cmd/Ctrl + H`).
+  </Step>
+  
+  <Step title="Local OCR Processing">
+    Tesseract.js extracts text from the image locally:
+    
+    ```typescript
+    // OCR extraction (source/electron/LLMHelper.ts:361)
+    const ocrResults = await Promise.all(
+      imagePaths.map(path => Tesseract.recognize(path, 'eng'))
+    )
+    const extractedText = ocrResults.map(r => r.data.text).join("\n---\n")
+    ```
+  </Step>
+  
+  <Step title="Text Analysis">
+    Extracted text is sent to K2 Think for analysis:
+    
+    ```typescript
+    const prompt = `CONTEXT FROM SCREENSHOTS (EXTRACTED VIA LOCAL OCR):
+    """
+    ${extractedText}
+    """
+    
+    Analyze the extracted content and provide solutions...`
+    ```
+  </Step>
+</Steps>
+
+### Benefits of Local OCR
+
+<CardGroup cols={2}>
+  <Card title="Zero Vision Costs" icon="dollar-sign">
+    No expensive vision API calls - OCR runs entirely on your machine
+  </Card>
+  <Card title="Privacy" icon="lock">
+    Images processed locally before text is sent to API
+  </Card>
+  <Card title="Fast Processing" icon="bolt">
+    Tesseract.js is optimized for speed
+  </Card>
+  <Card title="Offline Capable" icon="wifi-off">
+    OCR works without internet (API call still requires connection)
+  </Card>
+</CardGroup>
+
+### OCR Accuracy
+
+<Warning>
+  OCR works best with:
+  - Clear, high-resolution screenshots
+  - Text-based content (code, documents, error messages)
+  - Standard fonts and layouts
+  
+  May struggle with:
+  - Handwritten text
+  - Complex visual layouts
+  - Low-resolution or blurry images
+</Warning>
+
+## Use Cases
+
+K2 Think V2 excels at:
+
+<AccordionGroup>
+  <Accordion title="Complex Problem Solving">
+    - Multi-step reasoning tasks
+    - Technical analysis
+    - Algorithm design
+    - System architecture planning
+  </Accordion>
+  
+  <Accordion title="Code Analysis">
+    - Debug error messages (via OCR)
+    - Code review and optimization
+    - Architecture discussions
+    - Technical documentation
+  </Accordion>
+  
+  <Accordion title="Research & Analysis">
+    - Academic problem solving
+    - Mathematical reasoning
+    - Logical deduction
+    - Comparative analysis
+  </Accordion>
+</AccordionGroup>
+
+## Limitations
+
+### Image Analysis
+
+<Warning>
+  K2 Think uses OCR, not native vision:
+</Warning>
+
+- **Good for**: Text-heavy screenshots, code, error messages, documents
+- **Not ideal for**: Charts, diagrams, photos, visual designs
+
+For native vision capabilities, use [Gemini](/ai-providers/gemini) instead.
+
+### Audio Processing
+
+<Note>
+  Audio features are not supported. Cluely uses Gemini for all voice functionality, even when K2 Think is enabled.
+</Note>
+
+### Streaming
+
+Current implementation uses non-streaming responses:
+
+```typescript
+stream: false  // K2 Think API configuration
+```
+
+Responses arrive all at once after processing completes.
+
+## Switching to K2 Think
+
+### At Startup
+
+Set environment variables:
+
+```env
+K2_THINK_API_KEY=your_api_key_here
+USE_K2_THINK=true
+```
+
+### At Runtime
+
+Switch from another provider:
+
+```typescript
+// Switch to K2 Think V2
+await llmHelper.switchToK2Think(
+  'your_api_key_here',
+  'MBZUAI-IFM/K2-Think-v2'
+)
+
+// Or use existing key from environment
+await llmHelper.switchToK2Think()
+
+// Verify current provider
+const provider = llmHelper.getCurrentProvider()
+console.log(provider)  // "k2think"
+```
+
+### Priority Order
+
+K2 Think has highest priority when enabled:
+
+```typescript
+// Provider selection logic (source/electron/LLMHelper.ts:666-669)
+if (this.useK2Think) return "k2think";
+if (this.useOpenRouter) return "openrouter";
+return this.useOllama ? "ollama" : "gemini";
+```
+
+## Testing Connection
+
+Verify K2 Think is configured correctly:
+
+```typescript
+const result = await llmHelper.testConnection()
+
+if (result.success) {
+  console.log('K2 Think connected successfully')
+} else {
+  console.error('Connection failed:', result.error)
+}
+```
+
+Test sends a simple "Hello" prompt to verify API connectivity.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="K2 Think Not Activating">
+    **Issue**: Still using Gemini/other provider despite configuration
+    
+    **Solutions**:
+    1. Verify `USE_K2_THINK=true` is set in `.env`
+    2. Check `K2_THINK_API_KEY` is not empty
+    3. Restart Cluely after updating `.env`
+    4. Check console for: `[LLMHelper] Using K2 Think V2...`
+  </Accordion>
+  
+  <Accordion title="API Key Errors">
+    **Error**: `K2 Think API key is not configured` or `K2 Think API key is required`
+    
+    **Solutions**:
+    1. Verify API key is set in `.env`
+    2. Check for extra spaces or quotes
+    3. Ensure key is valid and active
+    4. Test with: `llmHelper.testConnection()`
+  </Accordion>
+  
+  <Accordion title="OCR Not Working">
+    **Issue**: Images not being analyzed properly
+    
+    **Solutions**:
+    1. Ensure screenshots are high-resolution
+    2. Check console for: `[LLMHelper] Starting Local OCR...`
+    3. Verify Tesseract.js is installed: Check `package.json` dependencies
+    4. Try with clear, text-heavy screenshots first
+  </Accordion>
+  
+  <Accordion title="API Errors">
+    **Error**: `K2 Think API error: 401/403/500`
+    
+    **Solutions**:
+    1. **401 Unauthorized**: Check API key is correct
+    2. **403 Forbidden**: Verify account has access to K2-Think-v2 model
+    3. **500 Server Error**: K2 Think service may be down, try again later
+    4. **Rate Limiting**: Wait before retrying
+  </Accordion>
+</AccordionGroup>
+
+## OCR Best Practices
+
+<Steps>
+  <Step title="Optimize Screenshots">
+    - Use high resolution (1920x1080 or higher)
+    - Ensure good contrast between text and background
+    - Avoid heavy compression or artifacts
+  </Step>
+  
+  <Step title="Content Type">
+    **Best for**:
+    - Code snippets
+    - Error messages
+    - Text documents
+    - Console output
+    
+    **Avoid**:
+    - Heavily styled text
+    - Cursive fonts
+    - Overlapping elements
+  </Step>
+  
+  <Step title="Monitor OCR Output">
+    Check console for OCR results:
+    
+    ```bash
+    [LLMHelper] Starting Local OCR for 2 image(s)...
+    [LLMHelper] Local OCR complete. Total extracted text length: 1247
+    ```
+    
+    If extracted text length is unexpectedly low, screenshot quality may be poor.
+  </Step>
+</Steps>
+
+## Advanced Configuration
+
+### Custom System Prompts
+
+K2 Think uses Cluely's standard system prompt (source/electron/LLMHelper.ts:12-22):
+
+```typescript
+You are Wingman AI, a helpful, proactive assistant...
+```
+
+The prompt is automatically prepended to all requests.
+
+### Response Processing
+
+K2 Think responses are cleaned of markdown formatting:
+
+```typescript
+const text = this.cleanJsonResponse(result)
+const parsed = JSON.parse(text)
+```
+
+This ensures consistent JSON parsing for structured outputs.
+
+## Comparison with Other Providers
+
+| Feature | K2 Think V2 | Gemini | Ollama | OpenRouter |
+|---------|-------------|--------|--------|------------|
+| **Reasoning** | Advanced | Excellent | Good | Varies |
+| **Vision** | OCR-based | Native | None | Model-dependent |
+| **Privacy** | Cloud + Local OCR | Cloud | 100% Local | Cloud |
+| **Cost** | API costs | API costs | Free | API costs |
+| **Speed** | Moderate | Very Fast | Fast | Fast |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Provider Overview" icon="comparison" href="/ai-providers/overview">
+    Compare all AI providers
+  </Card>
+  <Card title="Gemini Setup" icon="google" href="/ai-providers/gemini">
+    Add Gemini for native vision capabilities
+  </Card>
+</CardGroup>

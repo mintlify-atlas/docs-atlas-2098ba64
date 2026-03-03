@@ -1,0 +1,422 @@
+---
+title: Installation
+description: Step-by-step guide to install Cluely on Windows, macOS, and Linux
+---
+
+# Installing Cluely
+
+This guide will walk you through installing Cluely on your machine. The process takes about 5-10 minutes depending on your AI provider choice.
+
+## Prerequisites
+
+Before installing Cluely, ensure you have the following installed:
+
+<Steps>
+  <Step title="Node.js">
+    Install Node.js version 16 or higher from [nodejs.org](https://nodejs.org)
+    
+    Verify installation:
+    ```bash
+    node --version
+    npm --version
+    ```
+  </Step>
+  
+  <Step title="Git">
+    Install Git from [git-scm.com](https://git-scm.com/downloads)
+    
+    Verify installation:
+    ```bash
+    git --version
+    ```
+  </Step>
+  
+  <Step title="AI Provider (Choose one)">
+    Choose one of the following AI providers:
+    
+    <Tabs>
+      <Tab title="Gemini (Recommended for beginners)">
+        Get a free API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+        
+        **Pros:**
+        - Fastest setup (just need API key)
+        - Best accuracy for complex tasks
+        - Latest AI technology (Gemini 2.0 Flash)
+        
+        **Cons:**
+        - Requires internet connection
+        - Data sent to Google servers
+        - Usage costs apply (generous free tier)
+      </Tab>
+      
+      <Tab title="Ollama (Recommended for privacy)">
+        Install Ollama from [ollama.ai](https://ollama.ai)
+        
+        Pull a model:
+        ```bash
+        ollama pull llama3.2
+        ```
+        
+        **Pros:**
+        - 100% private - data never leaves your computer
+        - No API costs
+        - Works offline
+        - Supports many models: llama3.2, codellama, mistral, etc.
+        
+        **Cons:**
+        - Requires more RAM (8GB+ recommended)
+        - Slower than cloud providers
+        - Requires Ollama service running
+      </Tab>
+      
+      <Tab title="OpenRouter">
+        Get an API key from [openrouter.ai](https://openrouter.ai)
+        
+        **Pros:**
+        - Access to multiple AI models
+        - Flexible pricing
+        - Good for experimentation
+        
+        **Cons:**
+        - Requires internet
+        - Pay-per-use pricing
+      </Tab>
+      
+      <Tab title="K2 Think V2">
+        Get an API key for K2 Think (high reasoning AI)
+        
+        **Pros:**
+        - Advanced reasoning capabilities
+        - Good for complex problems
+        
+        **Cons:**
+        - Requires API key
+        - Cloud-based processing
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Installation steps
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/yourusername/free-cluely.git
+    cd free-cluely
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    <Tabs>
+      <Tab title="Standard installation">
+        ```bash
+        npm install
+        ```
+      </Tab>
+      
+      <Tab title="If you encounter Sharp/Python errors">
+        If you see `gyp ERR! find Python` or Sharp build errors:
+        
+        ```bash
+        npx cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --ignore-scripts
+        ```
+        
+        This uses prebuilt Sharp binaries instead of building from source.
+      </Tab>
+    </Tabs>
+    
+    <Note>
+      The installation automatically runs `npm rebuild sharp` via the postinstall script to ensure Sharp is properly configured.
+    </Note>
+  </Step>
+  
+  <Step title="Configure environment variables">
+    Create a `.env` file in the root folder:
+    
+    ```bash
+    touch .env
+    ```
+    
+    Choose your AI provider configuration:
+    
+    <Tabs>
+      <Tab title="Gemini">
+        ```env
+        # Primary API key (required)
+        GEMINI_API_KEY=your_primary_api_key_here
+        
+        # Fallback API key (optional but recommended)
+        GEMINI_FALLBACK_API_KEY=your_backup_api_key_here
+        ```
+        
+        <Note>
+          The fallback API key is used automatically if the primary key hits rate limits or errors.
+        </Note>
+      </Tab>
+      
+      <Tab title="Ollama">
+        ```env
+        # Enable Ollama
+        USE_OLLAMA=true
+        
+        # Model name (auto-detected if not set)
+        OLLAMA_MODEL=llama3.2
+        
+        # Ollama server URL (optional, defaults to localhost)
+        OLLAMA_URL=http://localhost:11434
+        ```
+        
+        Make sure Ollama is running:
+        ```bash
+        ollama serve
+        ```
+      </Tab>
+      
+      <Tab title="OpenRouter">
+        ```env
+        OPENROUTER_API_KEY=your_openrouter_api_key_here
+        OPENROUTER_MODEL=google/gemini-2.5-flash
+        ```
+        
+        Available models include:
+        - `google/gemini-2.5-flash`
+        - `anthropic/claude-3-opus`
+        - `openai/gpt-4-turbo`
+        - And many more at [openrouter.ai/models](https://openrouter.ai/models)
+      </Tab>
+      
+      <Tab title="K2 Think V2">
+        ```env
+        K2_THINK_API_KEY=your_k2_think_api_key_here
+        USE_K2_THINK=true
+        ```
+      </Tab>
+      
+      <Tab title="Multiple providers">
+        You can configure multiple providers and switch between them:
+        
+        ```env
+        # Gemini (primary)
+        GEMINI_API_KEY=your_gemini_key_here
+        
+        # Ollama (fallback/private mode)
+        USE_OLLAMA=false
+        OLLAMA_MODEL=llama3.2
+        
+        # OpenRouter (alternative)
+        OPENROUTER_API_KEY=your_openrouter_key_here
+        OPENROUTER_MODEL=google/gemini-2.5-flash
+        ```
+        
+        <Note>
+          The app uses the first available provider in this priority: K2 Think → OpenRouter → Gemini → Ollama
+        </Note>
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Start the application">
+    <Tabs>
+      <Tab title="Development mode (recommended for first run)">
+        ```bash
+        npm start
+        ```
+        
+        This command:
+        1. Starts the Vite dev server on port 5180
+        2. Waits for the server to be ready
+        3. Launches the Electron app
+        
+        <Note>
+          The dev server runs on port 5180. If this port is in use, you'll need to free it first.
+        </Note>
+      </Tab>
+      
+      <Tab title="Production build">
+        Build the application for your platform:
+        
+        ```bash
+        npm run dist
+        ```
+        
+        The built app will be in the `release` folder:
+        - **macOS**: `.dmg` installer
+        - **Windows**: `.exe` installer and portable `.exe`
+        - **Linux**: `.AppImage` and `.deb` packages
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Platform-specific notes
+
+<Tabs>
+  <Tab title="macOS">
+    **Permissions**
+    
+    On first launch, macOS may ask for permissions:
+    - **Screen Recording**: Required for screenshot functionality
+    - **Accessibility**: Required for global shortcuts
+    
+    Grant these in System Preferences → Security & Privacy → Privacy.
+    
+    **Dock icon**
+    
+    Cluely hides from the dock by default (see `electron/main.ts:320`). Access it via:
+    - Global shortcuts
+    - Menu bar tray icon (shows as "IC")
+    
+    **Closing the app**
+    
+    Use `Cmd + Q` to quit properly. The close button (X) currently doesn't work (known issue).
+  </Tab>
+  
+  <Tab title="Windows">
+    **Windows 10/11 Support**
+    
+    Cluely is fully tested on Windows 10 and 11 with:
+    - Fixed UI loading issues
+    - Improved error handling
+    - Platform-specific window focus fixes
+    
+    **Installation**
+    
+    You can choose between:
+    - **NSIS Installer**: Traditional Windows installer with options
+    - **Portable**: No installation required, run directly
+    
+    **Closing the app**
+    
+    Use `Ctrl + Q` or Task Manager to quit. The close button (X) currently doesn't work (known issue).
+  </Tab>
+  
+  <Tab title="Linux">
+    **Tested distributions**
+    
+    - Ubuntu 20.04+
+    - Most major Linux distributions
+    
+    **Installation formats**
+    
+    - **AppImage**: Universal Linux format, no installation needed
+    - **DEB**: For Debian/Ubuntu-based systems
+    
+    **Dependencies**
+    
+    Most dependencies are bundled, but ensure you have:
+    ```bash
+    # Ubuntu/Debian
+    sudo apt-get install libgtk-3-0 libnotify4 libnss3 libxss1 libxtst6 xdg-utils
+    ```
+    
+    **Window interaction**
+    
+    Fixed focusable settings ensure proper window interaction on Linux window managers.
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+### Port 5180 already in use
+
+If you see an error about port 5180:
+
+```bash
+# Find processes using port 5180
+lsof -i :5180
+
+# Kill the process (replace [PID] with the process ID)
+kill [PID]
+```
+
+### Sharp/Python build errors
+
+<Warning>
+  If you see `gyp ERR! find Python` or Sharp-related errors during installation:
+</Warning>
+
+<CodeGroup>
+```bash Solution 1: Use prebuilt binaries (recommended)
+rm -rf node_modules package-lock.json
+npx cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --ignore-scripts
+npm rebuild sharp
+```
+
+```bash Solution 2: Install Python
+# macOS
+brew install python3
+
+# Ubuntu/Debian
+sudo apt-get install python3
+
+# Windows
+# Download from python.org
+
+# Then reinstall
+npm install
+```
+</CodeGroup>
+
+### Ollama not responding
+
+If using Ollama and the app can't connect:
+
+1. Ensure Ollama is running:
+   ```bash
+   ollama serve
+   ```
+
+2. Verify the model is pulled:
+   ```bash
+   ollama list
+   ```
+
+3. Test Ollama directly:
+   ```bash
+   curl http://localhost:11434/api/generate -d '{
+     "model": "llama3.2",
+     "prompt": "Hello"
+   }'
+   ```
+
+### General installation issues
+
+If you encounter other errors:
+
+<Steps>
+  <Step title="Clean installation">
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Step>
+  
+  <Step title="Verify environment variables">
+    Check that your `.env` file is in the root directory and properly formatted.
+  </Step>
+  
+  <Step title="Check logs">
+    Run in development mode to see detailed logs:
+    ```bash
+    npm start
+    ```
+  </Step>
+</Steps>
+
+### App won't quit
+
+<Warning>
+  The close button (X) currently doesn't work. This is a known issue.
+</Warning>
+
+**Solutions:**
+- Press `Cmd + Q` (macOS) or `Ctrl + Q` (Windows/Linux)
+- Use Activity Monitor (macOS) or Task Manager (Windows) to force quit "Interview Coder"
+- On Linux: `pkill -f "interview-coder"`
+
+## Next steps
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Learn how to take your first screenshot and get AI-powered insights
+</Card>

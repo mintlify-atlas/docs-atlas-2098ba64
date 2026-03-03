@@ -1,0 +1,286 @@
+---
+title: AI chat
+description: Have contextual conversations with Cluely's AI assistant
+---
+
+Cluely includes a built-in chat interface that lets you interact with AI models for code assistance, problem-solving, and general questions without needing to capture screenshots.
+
+## How it works
+
+The chat feature provides a direct text interface to Cluely's language models, supporting multiple AI providers:
+
+- **Google Gemini** (default) - Fast, capable vision and language model
+- **Ollama** - Local, privacy-focused models
+- **OpenRouter** - Access to various cloud models
+- **K2 Think** - Specialized reasoning models
+
+## Starting a chat
+
+Access the chat interface through the Solutions view after processing screenshots or voice input. The chat maintains context from your current session:
+
+```typescript
+const response = await window.electronAPI.geminiChat(message)
+```
+
+### Chat with context
+
+The AI assistant uses the same system prompt across all features:
+
+```typescript
+private readonly systemPrompt = `You are Wingman AI, a helpful, proactive assistant for any kind of problem or situation. 
+
+CRITICAL: You MUST use Markdown for all responses.
+1. Use headers (#, ##), lists (* or 1.), and bold text to organize information clearly.
+2. Use LaTeX for ALL mathematical formulas and equations.
+3. Use code blocks with language specification for any code snippets.
+4. For any user input, analyze the situation, provide a clear problem statement, 
+   relevant context, and suggest several possible responses or actions.
+5. Always explain your reasoning.`
+```
+
+<Note>
+All responses are formatted in Markdown with support for LaTeX equations, code blocks, and structured formatting.
+</Note>
+
+## Response formatting
+
+### Code blocks
+
+Code in responses is automatically syntax-highlighted:
+
+````markdown
+```javascript
+function fibonacci(n) {
+  if (n <= 1) return n
+  return fibonacci(n - 1) + fibonacci(n - 2)
+}
+```
+````
+
+### Mathematical equations
+
+Math is rendered using LaTeX:
+
+- Inline: `$E=mc^2$` → $E=mc^2$
+- Block: `$$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$`
+
+### Structured information
+
+Responses use headers, lists, and bold text for clarity:
+
+```markdown
+## Problem Analysis
+
+**Issue**: Array index out of bounds
+
+**Possible causes**:
+* Loop condition is incorrect
+* Array size not validated
+* Off-by-one error in iteration
+```
+
+## AI provider management
+
+### Checking current provider
+
+See which AI provider is currently active:
+
+```typescript
+const config = await window.electronAPI.getCurrentLLMConfig()
+// Returns:
+// {
+//   provider: "gemini" | "ollama" | "openrouter" | "k2think",
+//   model: "models/gemini-2.5-flash",
+//   isOllama: false,
+//   isOpenRouter: false
+// }
+```
+
+### Switching providers
+
+<Tabs>
+  <Tab title="Gemini">
+    ```typescript
+    await window.electronAPI.switchToGemini(
+      apiKey,  // Optional if already configured
+      "models/gemini-2.5-flash"  // Optional model override
+    )
+    ```
+  </Tab>
+  
+  <Tab title="Ollama">
+    ```typescript
+    await window.electronAPI.switchToOllama(
+      "llama3.2",  // Optional: model name
+      "http://localhost:11434"  // Optional: custom URL
+    )
+    ```
+  </Tab>
+  
+  <Tab title="OpenRouter">
+    ```typescript
+    await window.electronAPI.switchToOpenRouter(
+      apiKey,  // Required
+      "google/gemini-2.5-flash"  // Optional model
+    )
+    ```
+  </Tab>
+  
+  <Tab title="K2 Think">
+    ```typescript
+    await window.electronAPI.switchToK2Think(
+      apiKey,  // Optional if in .env
+      "MBZUAI-IFM/K2-Think-v2"  // Optional model
+    )
+    ```
+  </Tab>
+</Tabs>
+
+### Testing connection
+
+Verify your AI provider is working:
+
+```typescript
+const result = await window.electronAPI.testLLMConnection()
+// Returns: { success: true } or { success: false, error: "..." }
+```
+
+<Warning>
+If you switch providers during a conversation, the chat history won't carry over. Start fresh conversations after switching.
+</Warning>
+
+## Local models with Ollama
+
+### Setup
+
+1. Install Ollama from [ollama.ai](https://ollama.ai)
+2. Pull a model: `ollama pull llama3.2`
+3. Set environment variables:
+
+```bash
+USE_OLLAMA=true
+OLLAMA_MODEL=llama3.2
+OLLAMA_URL=http://localhost:11434
+```
+
+### Auto-detection
+
+Cluely automatically detects available Ollama models:
+
+```typescript
+const models = await window.electronAPI.getAvailableOllamaModels()
+// Returns: ["llama3.2", "codellama", "mistral", ...]
+```
+
+If your specified model doesn't exist, Cluely uses the first available model.
+
+### Benefits
+
+<CardGroup cols={2}>
+  <Card title="Privacy" icon="lock">
+    All processing happens locally on your machine
+  </Card>
+  <Card title="No API costs" icon="dollar-sign">
+    Use unlimited tokens without spending money
+  </Card>
+  <Card title="Offline support" icon="wifi-slash">
+    Works without internet connection
+  </Card>
+  <Card title="Model choice" icon="sliders">
+    Choose from dozens of open-source models
+  </Card>
+</CardGroup>
+
+## Error handling
+
+### Rate limiting
+
+Cluely automatically handles rate limits with exponential backoff:
+
+```typescript
+private async generateContentWithRetry(contents: any): Promise<any> {
+  const maxRetries = 3
+  let delay = 1000
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await this.model.generateContent(contents)
+    } catch (error) {
+      if (error.message.includes('429') || error.message.includes('RATE_LIMIT')) {
+        // Switch to fallback API key if available
+        if (this.fallbackGeminiApiKey) {
+          this.geminiApiKey = this.fallbackGeminiApiKey
+          this.model = new GoogleGenAI({ apiKey: this.fallbackGeminiApiKey })
+          continue
+        }
+      }
+      if (error.message.includes('503') && attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay))
+        delay *= 2  // Exponential backoff
+      }
+    }
+  }
+}
+```
+
+<Info>
+Configure a fallback API key with `GEMINI_FALLBACK_API_KEY` to automatically switch when rate limits are hit.
+</Info>
+
+### Model overload
+
+When models are overloaded (503 errors), Cluely retries with exponential backoff up to 3 times.
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Write clear questions">
+    Be specific about what you need:
+    - ❌ "Fix this code"
+    - ✅ "Why does this function return undefined instead of the sum?"
+  </Accordion>
+  
+  <Accordion title="Provide context">
+    Share relevant details:
+    - Language/framework you're using
+    - What you've already tried
+    - Error messages you're seeing
+  </Accordion>
+  
+  <Accordion title="Break down complex problems">
+    For multi-step problems:
+    - Ask one question at a time
+    - Build on previous responses
+    - Verify understanding before moving forward
+  </Accordion>
+  
+  <Accordion title="Choose the right provider">
+    - **Gemini**: Best for vision + chat, fast responses
+    - **Ollama**: Best for privacy, offline work
+    - **OpenRouter**: Best for accessing specific models
+    - **K2 Think**: Best for complex reasoning tasks
+  </Accordion>
+</AccordionGroup>
+
+## Environment configuration
+
+Set these in your `.env` file:
+
+```bash
+# Gemini (default)
+GEMINI_API_KEY=your_key_here
+GEMINI_FALLBACK_API_KEY=backup_key  # Optional
+
+# Ollama (local)
+USE_OLLAMA=true
+OLLAMA_MODEL=llama3.2
+OLLAMA_URL=http://localhost:11434
+
+# OpenRouter
+OPENROUTER_API_KEY=your_key
+OPENROUTER_MODEL=google/gemini-2.5-flash
+
+# K2 Think
+USE_K2_THINK=true
+K2_THINK_API_KEY=your_key
+```

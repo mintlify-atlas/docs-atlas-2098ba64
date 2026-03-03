@@ -1,0 +1,548 @@
+---
+title: Building and Running
+description: How to build and run Cluely locally, including development workflow and troubleshooting
+---
+
+This guide walks you through setting up Cluely for development, running it locally, and building production releases.
+
+## Prerequisites
+
+<Steps>
+  <Step title="Install Node.js">
+    Install Node.js (v16 or later recommended)
+    
+    ```bash
+    # Check your Node version
+    node --version
+    ```
+    
+    Download from [nodejs.org](https://nodejs.org) if needed.
+  </Step>
+  
+  <Step title="Install Git">
+    ```bash
+    # Check if Git is installed
+    git --version
+    ```
+  </Step>
+  
+  <Step title="Choose an AI Provider">
+    You'll need **either**:
+    
+    **Option A: Google Gemini** (Cloud AI)
+    - Get API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+    - Fast, powerful, works immediately
+    - Sends data to Google servers
+    
+    **Option B: Ollama** (Local AI)
+    - Install from [ollama.ai](https://ollama.ai)
+    - 100% private, runs on your machine
+    - Requires ~4GB+ RAM
+  </Step>
+</Steps>
+
+## Clone and Install
+
+<CodeGroup>
+```bash Clone Repository
+git clone https://github.com/ibttf/interview-coder-frontend.git
+cd interview-coder-frontend
+```
+
+```bash Install Dependencies (Standard)
+npm install
+```
+
+```bash Install Dependencies (If Sharp/Python Errors)
+# If you see "gyp ERR! find Python" or Sharp build errors:
+rm -rf node_modules package-lock.json
+npx cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --ignore-scripts
+npm rebuild sharp
+```
+</CodeGroup>
+
+<Note>
+**Sharp Build Issues**: Sharp is an image processing library that sometimes fails to build. The `--ignore-scripts` approach uses prebuilt binaries instead of compiling from source.
+</Note>
+
+## Environment Configuration
+
+Create a `.env` file in the project root:
+
+<CodeGroup>
+```bash Gemini (Cloud AI)
+GEMINI_API_KEY=your_api_key_here
+GEMINI_FALLBACK_API_KEY=backup_key_here  # Optional
+```
+
+```bash Ollama (Local AI)
+USE_OLLAMA=true
+OLLAMA_MODEL=llama3.2
+OLLAMA_URL=http://localhost:11434
+```
+
+```bash OpenRouter
+OPENROUTER_API_KEY=your_api_key_here
+OPENROUTER_MODEL=google/gemini-2.5-flash
+```
+
+```bash K2 Think V2 (High Reasoning)
+K2_THINK_API_KEY=your_api_key_here
+USE_K2_THINK=true
+```
+</CodeGroup>
+
+### Setting Up Ollama (Optional)
+
+If using Ollama for private, local AI:
+
+<Steps>
+  <Step title="Install Ollama">
+    Download and install from [ollama.ai](https://ollama.ai)
+  </Step>
+  
+  <Step title="Pull a Model">
+    ```bash
+    # Recommended models:
+    ollama pull llama3.2        # General purpose
+    ollama pull codellama       # Code-focused
+    ollama pull mistral         # Lightweight, fast
+    ```
+  </Step>
+  
+  <Step title="Start Ollama Server">
+    ```bash
+    ollama serve
+    ```
+    
+    Keep this running in a terminal. Ollama runs on `http://localhost:11434` by default.
+  </Step>
+  
+  <Step title="Verify Connection">
+    ```bash
+    curl http://localhost:11434/api/tags
+    ```
+    
+    Should return a JSON list of installed models.
+  </Step>
+</Steps>
+
+## Development Workflow
+
+### Running in Development Mode
+
+The recommended way to run Cluely during development:
+
+```bash
+npm start
+```
+
+This single command:
+1. Starts Vite dev server on `http://localhost:5180`
+2. Waits for the server to be ready
+3. Compiles Electron TypeScript code
+4. Launches the Electron app with hot reload
+
+<Info>
+**How it works**: The `npm start` script is an alias for `npm run app:dev`, which uses `concurrently` to run multiple processes:
+
+```json
+"app:dev": "concurrently \"npm run dev -- --port 5180\" \"wait-on http://localhost:5180 && npm run electron:dev\""
+```
+</Info>
+
+### Manual Development Steps
+
+If you prefer to run processes separately:
+
+<Accordion title="Step-by-Step Manual Development">
+  <Steps>
+    <Step title="Terminal 1: Start Vite Dev Server">
+      ```bash
+      npm run dev
+      ```
+      
+      Starts React dev server with hot module replacement on port 5180.
+    </Step>
+    
+    <Step title="Terminal 2: Watch Electron TypeScript">
+      ```bash
+      npm run watch
+      ```
+      
+      Compiles `electron/*.ts` files to `dist-electron/` on changes.
+    </Step>
+    
+    <Step title="Terminal 3: Run Electron">
+      ```bash
+      npm run electron:dev
+      ```
+      
+      Launches Electron with `NODE_ENV=development`.
+    </Step>
+  </Steps>
+</Accordion>
+
+### Development Features
+
+<CardGroup cols={2}>
+  <Card title="Hot Reload" icon="arrows-rotate">
+    React components reload instantly without restarting Electron.
+  </Card>
+  
+  <Card title="DevTools" icon="code">
+    Uncomment in `electron/WindowHelper.ts:105`:
+    ```typescript
+    this.mainWindow.webContents.openDevTools()
+    ```
+  </Card>
+  
+  <Card title="Live Logs" icon="terminal">
+    All `console.log` statements from main process appear in your terminal.
+  </Card>
+  
+  <Card title="URL Loading" icon="browser">
+    Dev mode loads from `http://localhost:5180` instead of file system.
+  </Card>
+</CardGroup>
+
+## Build Scripts Reference
+
+<CodeGroup>
+```json package.json Scripts
+{
+  "scripts": {
+    // Development
+    "dev": "vite --port 5180",
+    "electron:dev": "tsc -p electron/tsconfig.json && cross-env NODE_ENV=development electron .",
+    "app:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5180 && npm run electron:dev\"",
+    "start": "npm run app:dev",
+    
+    // Build
+    "clean": "rimraf dist dist-electron",
+    "build": "npm run clean && tsc && vite build",
+    "electron:build": "tsc -p electron/tsconfig.json && cross-env NODE_ENV=production electron .",
+    "app:build": "npm run build && electron-builder",
+    "dist": "npm run app:build",
+    
+    // Utilities
+    "watch": "tsc -p electron/tsconfig.json --watch",
+    "postinstall": "cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm rebuild sharp"
+  }
+}
+```
+</CodeGroup>
+
+### Script Breakdown
+
+| Script | Description | When to Use |
+|--------|-------------|-------------|
+| `npm start` | Full dev environment | **Primary development command** |
+| `npm run dev` | Vite server only | Testing React components |
+| `npm run electron:dev` | Electron only | Testing main process changes |
+| `npm run watch` | Compile Electron on save | Advanced development |
+| `npm run build` | Build React app | Before packaging |
+| `npm run dist` | Full production build | Creating distributable app |
+| `npm run clean` | Remove build artifacts | Clean slate before rebuild |
+
+## Building for Production
+
+<Steps>
+  <Step title="Clean Previous Builds">
+    ```bash
+    npm run clean
+    ```
+    
+    Removes `dist/` and `dist-electron/` directories.
+  </Step>
+  
+  <Step title="Build the Application">
+    ```bash
+    npm run dist
+    ```
+    
+    This command:
+    1. Runs `npm run clean`
+    2. Compiles TypeScript (`tsc`)
+    3. Builds React with Vite (`vite build`)
+    4. Compiles Electron TypeScript
+    5. Packages with electron-builder
+  </Step>
+  
+  <Step title="Find Built Application">
+    Built apps are in the `release/` directory:
+    
+    <CodeGroup>
+    ```bash macOS
+    release/
+    ├── Meeting Notes Coder-1.0.0.dmg         # Installer
+    ├── Meeting Notes Coder-1.0.0-arm64.dmg   # Apple Silicon
+    └── Meeting Notes Coder-1.0.0-x64.dmg     # Intel
+    ```
+    
+    ```bash Windows
+    release/
+    ├── Meeting Notes Coder Setup 1.0.0.exe   # Installer
+    └── Meeting Notes Coder 1.0.0.exe         # Portable
+    ```
+    
+    ```bash Linux
+    release/
+    ├── meeting-notes-coder_1.0.0_amd64.deb   # Debian/Ubuntu
+    └── Meeting-Notes-Coder-1.0.0.AppImage    # Universal
+    ```
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## electron-builder Configuration
+
+The build configuration in `package.json` controls how the app is packaged:
+
+```json
+"build": {
+  "appId": "com.electron.meeting-notes",
+  "productName": "Meeting Notes Coder",
+  "files": [
+    "dist/**/*",
+    "dist-electron/**/*",
+    "package.json",
+    "node_modules/**/*"
+  ],
+  "directories": {
+    "output": "release",
+    "buildResources": "assets"
+  },
+  "extraResources": [
+    {
+      "from": "assets/",
+      "to": "assets/"
+    }
+  ],
+  "mac": {
+    "category": "public.app-category.productivity",
+    "target": [{"target": "dmg", "arch": ["x64", "arm64"]}],
+    "icon": "assets/icons/mac/icon.icns"
+  },
+  "win": {
+    "target": [{"target": "nsis"}, {"target": "portable"}],
+    "icon": "assets/icons/win/icon.ico"
+  },
+  "linux": {
+    "target": [{"target": "AppImage"}, {"target": "deb"}],
+    "category": "Office"
+  }
+}
+```
+
+### Build Customization
+
+<Accordion title="Change App Name">
+  Edit `productName` in the `build` section of `package.json`:
+  
+  ```json
+  "productName": "Your App Name"
+  ```
+</Accordion>
+
+<Accordion title="Add/Remove Build Targets">
+  Modify the `target` arrays for each platform:
+  
+  ```json
+  "mac": {
+    "target": [
+      {"target": "dmg", "arch": ["arm64"]},  // Apple Silicon only
+      {"target": "zip", "arch": ["x64"]}     // Add zip format
+    ]
+  }
+  ```
+</Accordion>
+
+<Accordion title="Update App Icons">
+  Place icons in `assets/icons/`:
+  
+  - **macOS**: `assets/icons/mac/icon.icns` (512x512 PNG converted to ICNS)
+  - **Windows**: `assets/icons/win/icon.ico` (256x256 ICO format)
+  - **Linux**: `assets/icons/png/` (multiple PNG sizes)
+</Accordion>
+
+## Troubleshooting
+
+### Port Already in Use
+
+<Accordion title="Error: Port 5180 is already in use">
+  **Problem**: Another instance of Vite is running.
+  
+  **Solution**:
+  ```bash
+  # macOS/Linux: Find and kill the process
+  lsof -i :5180
+  kill -9 [PID]
+  
+  # Windows: Find and kill the process
+  netstat -ano | findstr :5180
+  taskkill /PID [PID] /F
+  ```
+  
+  Or change the port in `package.json`:
+  ```json
+  "dev": "vite --port 5181"
+  ```
+</Accordion>
+
+### Electron Won't Start
+
+<Accordion title="White screen or blank window">
+  **Causes**:
+  1. Vite server not running
+  2. Port mismatch between Vite and Electron
+  3. TypeScript compilation errors
+  
+  **Debug Steps**:
+  ```bash
+  # 1. Check if Vite is running
+  curl http://localhost:5180
+  
+  # 2. Check Electron TypeScript compilation
+  npm run electron:dev
+  # Look for errors in output
+  
+  # 3. Enable DevTools (uncomment in WindowHelper.ts)
+  this.mainWindow.webContents.openDevTools()
+  ```
+</Accordion>
+
+### Build Failures
+
+<Accordion title="TypeScript errors during build">
+  **Problem**: Type errors prevent compilation.
+  
+  **Solution**:
+  ```bash
+  # Check for errors
+  npx tsc --noEmit
+  
+  # For Electron code specifically
+  npx tsc -p electron/tsconfig.json --noEmit
+  ```
+</Accordion>
+
+<Accordion title="electron-builder fails">
+  **Common issues**:
+  
+  1. **Missing files**: Ensure `dist/` and `dist-electron/` exist
+     ```bash
+     npm run build
+     ```
+  
+  2. **Permission errors**: Run without sudo/admin
+  
+  3. **Disk space**: electron-builder needs ~1GB+ free space
+  
+  4. **macOS code signing**: Disable if not publishing
+     ```json
+     "mac": {
+       "identity": null
+     }
+     ```
+</Accordion>
+
+### Platform-Specific Issues
+
+<Accordion title="Windows: UI not loading">
+  **Problem**: Renderer process can't connect to main process.
+  
+  **Solution**: Ensure `main` field in `package.json` points to the correct file:
+  ```json
+  "main": "./dist-electron/main.js"
+  ```
+</Accordion>
+
+<Accordion title="Linux: Window interaction problems">
+  **Problem**: Can't click or focus the window.
+  
+  **Solution**: Check window settings in `electron/WindowHelper.ts:115-122`:
+  ```typescript
+  if (process.platform === "linux") {
+    this.mainWindow.setFocusable(true)
+    if (this.mainWindow.setHasShadow) {
+      this.mainWindow.setHasShadow(false)
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="macOS: App won't quit">
+  **Problem**: Pressing Cmd+Q doesn't quit.
+  
+  **Workaround**:
+  1. Use Activity Monitor to force quit
+  2. Or add proper quit handler:
+     ```typescript
+     app.on('before-quit', () => {
+       // Cleanup code
+     })
+     ```
+</Accordion>
+
+### Ollama Issues
+
+<Accordion title="Ollama connection failed">
+  **Problem**: Can't connect to Ollama server.
+  
+  **Debug Steps**:
+  ```bash
+  # 1. Check if Ollama is running
+  curl http://localhost:11434/api/tags
+  
+  # 2. Start Ollama server
+  ollama serve
+  
+  # 3. Verify model is pulled
+  ollama list
+  
+  # 4. Pull model if needed
+  ollama pull llama3.2
+  ```
+</Accordion>
+
+## Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GEMINI_API_KEY` | - | Primary Google Gemini API key |
+| `GEMINI_FALLBACK_API_KEY` | - | Backup API key for rate limits |
+| `USE_OLLAMA` | `false` | Enable Ollama local AI |
+| `OLLAMA_MODEL` | `llama3.2` | Ollama model to use |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
+| `OPENROUTER_API_KEY` | - | OpenRouter API key |
+| `OPENROUTER_MODEL` | `google/gemini-2.5-flash` | OpenRouter model |
+| `K2_THINK_API_KEY` | - | K2 Think V2 API key |
+| `USE_K2_THINK` | `false` | Enable K2 Think V2 |
+| `NODE_ENV` | `development` | Set to `production` for builds |
+
+## Development Tips
+
+<CardGroup cols={2}>
+  <Card title="Fast Iteration" icon="bolt">
+    Changes to React components reload instantly. For Electron changes, restart with `npm run electron:dev`.
+  </Card>
+  
+  <Card title="Debug Main Process" icon="bug">
+    Use `console.log()` in Electron code - output appears in the terminal where you ran `npm start`.
+  </Card>
+  
+  <Card title="Debug Renderer" icon="browser">
+    Enable DevTools in `WindowHelper.ts` or press `Cmd+Option+I` (may not work due to global shortcuts).
+  </Card>
+  
+  <Card title="Test Multiple Platforms" icon="desktop">
+    Use VMs or dual-boot to test Windows/Linux builds if developing on macOS.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<Card title="Contributing Guidelines" href="/development/contributing" icon="code-pull-request">
+  Ready to contribute? Read our contribution guidelines for code style, PR process, and more.
+</Card>

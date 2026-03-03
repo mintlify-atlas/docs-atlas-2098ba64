@@ -1,0 +1,495 @@
+---
+title: Use Cases
+description: Real-world usage scenarios for Cluely in academic, professional, and development contexts
+---
+
+## Academic & Learning
+
+Cluely helps students and learners succeed in educational settings with real-time AI assistance.
+
+### Live Presentation Support
+
+<Accordion title="During Classes">
+  **Scenario:** Following along in a virtual or in-person lecture
+
+  **How to use:**
+  1. Take screenshots of presentation slides with `Cmd/Ctrl + H`
+  2. Ask clarifying questions about concepts
+  3. Get instant explanations without interrupting the lecturer
+  4. Request examples or analogies for complex topics
+
+  **Example:**
+  ```
+  Screenshot: Slide about neural network backpropagation
+  Question: "Explain how the chain rule applies here"
+  Result: Step-by-step breakdown with mathematical notation
+  ```
+
+  **Privacy tip:** Use Ollama for classroom recordings or confidential course materials.
+</Accordion>
+
+### Quick Research During Exams
+
+<Accordion title="Open-Book Exams">
+  **Scenario:** Online open-book exam with time pressure
+
+  **How to use:**
+  1. Screenshot exam questions
+  2. Get structured problem-solving approaches
+  3. Verify formulas and methods
+  4. Check your work for logical errors
+
+  **What Cluely provides:**
+  - Problem statement analysis
+  - Relevant context and background
+  - Multiple solution approaches
+  - Step-by-step reasoning
+
+  <Warning>
+    Only use for exams where external resources are explicitly permitted. Verify your institution's academic integrity policies.
+  </Warning>
+</Accordion>
+
+### Language Translation and Explanations
+
+<Accordion title="Language Learning">
+  **Scenario:** Reading technical documentation in a foreign language
+
+  **How to use:**
+  1. Screenshot text in foreign language
+  2. Request translation and explanation
+  3. Ask for grammar breakdowns
+  4. Get cultural context for idioms
+
+  **Supported by:**
+  - Gemini: Excellent multilingual support
+  - Ollama models like `llama3.2`: Good for common languages
+
+  **Example:**
+  ```
+  Screenshot: Japanese technical documentation
+  Prompt: "Translate this and explain the technical terms"
+  Result: English translation + technical context
+  ```
+</Accordion>
+
+### Math and Science Problem Solving
+
+<Accordion title="Homework Help">
+  **Scenario:** Stuck on a calculus or physics problem
+
+  **Cluely's specialized response (from LLMHelper.ts):**
+
+  > "If it is an APTITUDE/REASONING question (math, logical reasoning, puzzles, quantitative): Provide the correct answer with a clear step-by-step solution. Show the formula or method used."
+
+  **How it works:**
+  1. Screenshot the problem from textbook or assignment
+  2. Cluely automatically detects it's a math problem
+  3. Provides:
+     - Formula identification
+     - Step-by-step solution
+     - Alternative methods
+     - Verification of answer
+
+  **LaTeX rendering:**
+  - Block equations: $$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$
+  - Inline math: $E=mc^2$
+  - All formulas rendered beautifully with KaTeX
+
+  **Subjects supported:**
+  - Calculus and advanced mathematics
+  - Physics problems
+  - Chemistry equations
+  - Statistics and probability
+  - Logic puzzles
+</Accordion>
+
+## Professional Meetings
+
+Cluely acts as your invisible assistant during important business interactions.
+
+### Sales Call Preparation
+
+<Accordion title="Handling Objections">
+  **Scenario:** Client raises an unexpected objection during a sales call
+
+  **Workflow:**
+  1. Keep Cluely window visible in corner of screen
+  2. Screenshot client's concern in chat or presentation
+  3. Get instant talking points and objection handlers
+  4. Respond confidently without breaking conversation flow
+
+  **What Cluely provides:**
+  - Problem restatement (ensures understanding)
+  - Relevant context (market data, competitor info)
+  - Multiple response strategies
+  - Reasoning behind each approach
+
+  **Example:**
+  ```
+  Screenshot: "Your price is 30% higher than competitor X"
+  Cluely suggests:
+  1. Value-based response highlighting ROI
+  2. Feature differentiation talking points
+  3. Case study reference for similar client
+  ```
+
+  **Best with:** Gemini for fastest real-time responses
+</Accordion>
+
+### Technical Interview Coaching
+
+<Accordion title="Live Coding Support">
+  **Scenario:** Technical interview with live coding challenge
+
+  **Cluely's coding analysis (from LLMHelper.ts):**
+
+  > "If it is a CODING/PROGRAMMING question: Provide TWO Java solutions - a BRUTE FORCE approach and an OPTIMIZED approach. Include Time and Space complexity as comments. Check test cases and constraints carefully."
+
+  **How to use:**
+  1. Screenshot the coding problem statement
+  2. Get immediate problem analysis
+  3. Review multiple solution approaches
+  4. Understand time/space complexity
+  5. Debug issues with additional screenshots
+
+  **Debugging support:**
+  ```typescript
+  // From LLMHelper.ts:450-476
+  debugSolutionWithImages(problemInfo, currentCode, debugImagePaths)
+  ```
+
+  **What you get:**
+  - Brute force solution (simple, working)
+  - Optimized solution (interview-ready)
+  - Complexity analysis
+  - Edge case considerations
+  - Minimal code changes for bug fixes
+
+  <Warning>
+    Only use during take-home assessments or practice interviews where external resources are permitted. Most live interviews prohibit external assistance.
+  </Warning>
+</Accordion>
+
+### Client Presentation Support
+
+<Accordion title="Real-time Fact Checking">
+  **Scenario:** Presenting to executive team and need quick data verification
+
+  **Setup:**
+  1. Run Cluely on second monitor
+  2. Keep it translucent and always-on-top
+  3. Screenshot questions or data points
+  4. Get instant verification and additional context
+
+  **Use cases:**
+  - Verify statistics before citing
+  - Get additional examples to illustrate points
+  - Answer unexpected technical questions
+  - Provide quick competitor comparisons
+
+  **Privacy mode:**
+  ```env
+  USE_OLLAMA=true
+  ```
+  For confidential client presentations, use Ollama to ensure data never leaves your device.
+</Accordion>
+
+### Meeting Notes and Action Items
+
+<Accordion title="Audio Analysis">
+  **Scenario:** Record and analyze meeting audio for insights
+
+  **How to use:**
+  1. Record meeting audio (with permission)
+  2. Upload audio file to Cluely
+  3. Get automatic analysis and summary
+
+  **From LLMHelper.ts:521-538:**
+  ```typescript
+  public async analyzeAudioFile(audioPath: string) {
+    // Describes audio clip in concise answer
+    // Suggests several possible actions based on audio
+  }
+  ```
+
+  **What you get:**
+  - Concise audio description
+  - Key points and themes
+  - Suggested follow-up actions
+  - Action items extraction
+
+  **Supported formats:** MP3 audio files
+</Accordion>
+
+## Development & Tech
+
+Cluely accelerates development workflows with instant technical assistance.
+
+### Debug Error Messages Instantly
+
+<Accordion title="Stack Trace Analysis">
+  **Scenario:** Hit a confusing error during development
+
+  **Workflow:**
+  1. Screenshot the error message or stack trace
+  2. Get instant diagnosis and solutions
+  3. Understand root cause
+  4. Apply fix
+
+  **Example errors Cluely handles:**
+  - Python stack traces
+  - JavaScript console errors
+  - Compiler errors (Java, C++, Rust)
+  - Database errors
+  - API error responses
+
+  **What you get:**
+  - Error explanation in plain English
+  - Root cause analysis
+  - Multiple solution approaches
+  - Prevention tips for future
+
+  **Special debugging feature:**
+  ```typescript
+  debugSolutionWithImages(problemInfo, currentCode, debugImages)
+  ```
+  
+  Provides:
+  - Minimal code changes to fix bug
+  - Respects debug constraints (e.g., "max 5 characters modified")
+  - Shows exactly which lines changed
+</Accordion>
+
+### Code Explanation and Optimization
+
+<Accordion title="Understanding Legacy Code">
+  **Scenario:** Working with unfamiliar codebase
+
+  **How to use:**
+  1. Screenshot complex code sections
+  2. Ask for explanation
+  3. Request optimization suggestions
+  4. Understand design patterns used
+
+  **Cluely's code analysis:**
+  - Explains what code does
+  - Identifies design patterns
+  - Suggests optimizations
+  - Points out potential bugs
+  - Explains time/space complexity
+
+  **Example:**
+  ```
+  Screenshot: Complex recursive function
+  Question: "Explain this and suggest optimization"
+  Result: 
+    - Plain English explanation
+    - Recursive call tree diagram (text-based)
+    - Iterative alternative with better performance
+    - Complexity analysis (O(2^n) → O(n))
+  ```
+</Accordion>
+
+### Documentation and API References
+
+<Accordion title="Quick API Lookups">
+  **Scenario:** Need to understand how to use an unfamiliar API
+
+  **Workflow:**
+  1. Screenshot API documentation
+  2. Ask for usage examples
+  3. Get code snippets
+  4. Understand parameters and return values
+
+  **What Cluely provides:**
+  - API usage examples
+  - Parameter explanations
+  - Common pitfalls to avoid
+  - Best practices
+  - Error handling patterns
+
+  **Supported:**
+  - REST API documentation
+  - SDK documentation
+  - Library references
+  - Command-line tool help pages
+</Accordion>
+
+### Algorithm and Architecture Guidance
+
+<Accordion title="System Design Help">
+  **Scenario:** Designing a new system or choosing architecture
+
+  **How Cluely helps:**
+  1. Screenshot your requirements or whiteboard
+  2. Get architectural suggestions
+  3. Compare different approaches
+  4. Understand trade-offs
+
+  **System design insights:**
+  - Database schema suggestions
+  - Microservices vs monolith guidance
+  - Caching strategies
+  - Scalability considerations
+  - Security best practices
+
+  **Example:**
+  ```
+  Screenshot: Whiteboard sketch of system architecture
+  Question: "Review this design for a real-time chat app"
+  Result:
+    - Analysis of current design
+    - Scalability bottlenecks identified
+    - WebSocket vs polling recommendation
+    - Database choice guidance (SQL vs NoSQL)
+    - Suggested improvements
+  ```
+</Accordion>
+
+### Multiple Choice Technical Questions
+
+<Accordion title="Certification Exams">
+  **Scenario:** Studying for AWS, Azure, or other technical certifications
+
+  **Cluely's MCQ analysis (from LLMHelper.ts):**
+
+  > "If it is a MULTIPLE CHOICE question (MCQ): Identify the correct option and explain why it is correct and why other options are wrong."
+
+  **How to use:**
+  1. Screenshot practice exam questions
+  2. Get detailed answer explanations
+  3. Understand why wrong answers are incorrect
+  4. Learn underlying concepts
+
+  **Perfect for:**
+  - AWS Solutions Architect certification
+  - Azure Administrator exam
+  - CompTIA certifications
+  - Coding interview prep (LeetCode, HackerRank)
+  - Database certifications
+</Accordion>
+
+## Why Choose Cluely?
+
+### Comparison with Alternatives
+
+| Feature | Cluely (Free) | Commercial Alternatives |
+|---------|---------------|------------------------|
+| **Cost** | 100% Free and open source | $29-99/month subscription |
+| **Privacy** | Local AI option (Ollama) | Cloud-only, data sent to servers |
+| **Offline Mode** | Yes (with Ollama) | No |
+| **Open Source** | Full transparency | Closed source, no auditing |
+| **Customization** | Fully customizable | Limited to provider's options |
+| **Data Control** | You own your data | Stored on third-party servers |
+| **Platform Support** | Windows, macOS, Linux | Often platform-limited |
+| **AI Models** | 4+ providers | Single provider lock-in |
+
+### Real User Workflows
+
+<Accordion title="Developer's Daily Routine">
+  **Morning:**
+  - Debug yesterday's failing tests (screenshot stack traces)
+  - Review pull request code (screenshot complex sections)
+  - Understand new library (screenshot docs)
+
+  **Afternoon:**
+  - Architecture meeting (screenshot whiteboard designs)
+  - Code review suggestions (screenshot proposed changes)
+  - API integration (screenshot error responses)
+
+  **Evening:**
+  - LeetCode practice (screenshot problems, get solutions)
+  - Study system design (screenshot diagrams)
+  - Side project debugging (screenshot console errors)
+
+  **AI Provider:** Gemini for fast responses during work hours, Ollama for side projects with sensitive code
+</Accordion>
+
+<Accordion title="Student's Study Session">
+  **Before exam:**
+  - Review lecture slides (screenshot + ask for explanations)
+  - Practice problems (screenshot textbook questions)
+  - Understand formulas (screenshot equations, get derivations)
+
+  **During open-book exam:**
+  - Screenshot questions
+  - Get structured problem-solving approaches
+  - Verify final answers
+  - Check time/space complexity
+
+  **After exam:**
+  - Review mistakes (screenshot incorrect solutions)
+  - Understand why answers were wrong
+  - Learn correct approach for future
+
+  **AI Provider:** Gemini for fastest responses during timed exams
+</Accordion>
+
+<Accordion title="Sales Professional's Meeting Prep">
+  **Pre-call:**
+  - Research competitor products (screenshot comparisons)
+  - Prepare objection handlers (screenshot common concerns)
+  - Review product features (screenshot release notes)
+
+  **During call:**
+  - Handle unexpected questions (screenshot client messages)
+  - Get instant talking points
+  - Verify pricing or technical details
+  - Provide additional examples
+
+  **Post-call:**
+  - Draft follow-up email (screenshot call notes)
+  - Create proposal outline (screenshot requirements)
+  - Schedule next steps (screenshot action items)
+
+  **AI Provider:** Ollama for confidential client information, Gemini for general research
+</Accordion>
+
+## Best Practices
+
+<Steps>
+  <Step title="Choose the right AI provider">
+    - **Gemini:** Speed and accuracy for general use
+    - **Ollama:** Privacy for sensitive information
+    - **K2 Think:** High reasoning for complex problems
+    - **OpenRouter:** Flexibility to try multiple models
+  </Step>
+
+  <Step title="Organize your screenshots">
+    - Take clear, focused screenshots
+    - Attach descriptive questions to each screenshot
+    - Delete screenshots after use for privacy
+    - Use primary queue for problems, extra queue for debug info
+  </Step>
+
+  <Step title="Optimize window placement">
+    - Keep Cluely on second monitor if available
+    - Use translucent, always-on-top mode
+    - Position in corner for minimal obstruction
+    - Use keyboard shortcuts for quick access:
+      - `Cmd/Ctrl + B`: Toggle visibility
+      - `Cmd/Ctrl + H`: Take screenshot
+      - `Cmd/Ctrl + Arrow`: Move window
+  </Step>
+
+  <Step title="Leverage specialized features">
+    - Use audio analysis for meeting notes
+    - Use debug mode for iterative problem-solving
+    - Use chat for follow-up questions
+    - Use voice input for hands-free operation
+  </Step>
+</Steps>
+
+## Getting Started
+
+Ready to try Cluely for your use case?
+
+1. **Install Cluely** - Follow the [Quick Start](/quickstart) guide
+2. **Configure AI Provider** - See [Configuration](/guides/configuration) for setup
+3. **Practice Workflow** - Take a few test screenshots to get comfortable
+4. **Use in Real Scenarios** - Start with low-stakes situations first
+
+<Info>
+  Start with Ollama if you're handling sensitive information, or Gemini if you want the fastest, most accurate responses.
+</Info>

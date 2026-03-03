@@ -1,80 +1,434 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with Cluely in under 5 minutes - from launch to your first AI-powered screenshot analysis
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will get you from installation to your first AI-powered screenshot analysis in under 5 minutes.
 
-### Step 1: Set up your local environment
+<Note>
+  Make sure you've completed the [installation](/installation) before proceeding.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Launch Cluely
+
+<Steps>
+  <Step title="Start the application">
+    Open your terminal in the Cluely directory and run:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    npm start
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    The application will:
+    1. Start the Vite development server on port 5180
+    2. Wait for the server to be ready
+    3. Launch the Electron window
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    You should see a translucent window appear on your screen.
+  </Step>
+  
+  <Step title="Understand the interface">
+    Cluely's window is designed to be invisible and non-intrusive:
+    
+    - **Translucent background**: See through to your work underneath
+    - **Always on top**: Stays visible across all applications
+    - **Compact design**: Takes minimal screen space
+    
+    The window starts in "queue" view, ready to capture screenshots.
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Master the keyboard shortcuts
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Cluely is designed to be controlled entirely with keyboard shortcuts for maximum efficiency.
 
-### Step 3: Go live
+### Essential shortcuts
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+| Shortcut | Action | Description |
+|----------|--------|-------------|
+| `Cmd/Ctrl + H` | Take screenshot | Captures screen and auto-processes with AI |
+| `Cmd/Ctrl + Enter` | Get solution | Processes queued screenshots |
+| `Cmd/Ctrl + B` | Toggle visibility | Show/hide the window |
+| `Cmd/Ctrl + Shift + Space` | Show & center | Brings window to center of screen |
+| `Cmd/Ctrl + R` | Reset | Clears all queues and cancels requests |
+| `Cmd + Q` / `Ctrl + Q` | Quit | Closes the application |
 
-## Next steps
+### Window positioning
 
-Now that you have your docs running, explore these key features:
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl + Left` | Move window left |
+| `Cmd/Ctrl + Right` | Move window right |
+| `Cmd/Ctrl + Up` | Move window up |
+| `Cmd/Ctrl + Down` | Move window down |
+
+<Note>
+  All shortcuts are registered globally in `electron/shortcuts.ts:11-106` and work even when Cluely isn't focused.
+</Note>
+
+## Your first screenshot analysis
+
+<Steps>
+  <Step title="Position the window">
+    Move Cluely's window to a corner of your screen where it won't obstruct your work:
+    
+    ```bash
+    # Use arrow key shortcuts
+    Cmd/Ctrl + Right  # Move to right side
+    Cmd/Ctrl + Down   # Move to bottom
+    ```
+    
+    Or hide it completely with `Cmd/Ctrl + B` - it will reappear automatically when you take a screenshot.
+  </Step>
+  
+  <Step title="Open content to analyze">
+    Open something you want help with:
+    
+    - A coding problem
+    - An error message
+    - A technical diagram
+    - Documentation you don't understand
+    - A math equation
+    - Interview question
+    
+    Make sure it's visible on your screen.
+  </Step>
+  
+  <Step title="Capture the screenshot">
+    Press `Cmd + H` (macOS) or `Ctrl + H` (Windows/Linux)
+    
+    What happens:
+    1. Cluely window automatically hides
+    2. Screenshot is captured (entire screen)
+    3. Window reappears with preview
+    4. AI automatically processes the image
+    
+    <Note>
+      The screenshot is saved temporarily and will be auto-deleted after processing for privacy.
+    </Note>
+  </Step>
+  
+  <Step title="View the AI analysis">
+    Within seconds, you'll see:
+    
+    - AI's analysis of the screenshot
+    - Explanations and insights
+    - Code suggestions (if applicable)
+    - Step-by-step solutions
+    
+    The response is formatted with:
+    - Syntax highlighting for code
+    - Math rendering (via KaTeX)
+    - Markdown formatting
+  </Step>
+  
+  <Step title="Ask follow-up questions (optional)">
+    Use the chat interface to:
+    
+    - Ask for clarification
+    - Request different approaches
+    - Dive deeper into specific parts
+    - Get additional examples
+    
+    The AI maintains context from your screenshot.
+  </Step>
+</Steps>
+
+## Example workflows
+
+### Debugging code errors
+
+<Steps>
+  <Step title="Capture the error">
+    1. Open your IDE with the error message visible
+    2. Press `Cmd/Ctrl + H` to capture
+    3. AI analyzes the error and code context
+  </Step>
+  
+  <Step title="Get the solution">
+    AI provides:
+    - Explanation of what's wrong
+    - Why the error occurred
+    - How to fix it
+    - Prevention tips
+  </Step>
+  
+  <Step title="Take additional screenshots if needed">
+    Press `Cmd/Ctrl + H` again to capture:
+    - Related code files
+    - Stack traces
+    - Configuration files
+    
+    All screenshots are processed together for full context.
+  </Step>
+</Steps>
+
+### Interview preparation
+
+<Steps>
+  <Step title="Capture the question">
+    During a coding interview or practice:
+    1. Question appears on screen
+    2. Press `Cmd/Ctrl + H` to capture
+    3. AI analyzes the problem
+  </Step>
+  
+  <Step title="Review the approach">
+    AI provides:
+    - Problem understanding
+    - Solution approach
+    - Code implementation
+    - Time/space complexity
+    - Edge cases to consider
+  </Step>
+  
+  <Step title="Toggle visibility">
+    Press `Cmd/Ctrl + B` to hide Cluely while you implement the solution, then show it again if you need hints.
+  </Step>
+</Steps>
+
+### Learning from presentations
+
+<Steps>
+  <Step title="Capture slides">
+    During a presentation or lecture:
+    1. Interesting slide appears
+    2. Press `Cmd/Ctrl + H` to capture
+    3. Continue listening
+  </Step>
+  
+  <Step title="Review later">
+    After the presentation:
+    1. Open Cluely
+    2. View captured slides
+    3. Ask AI for:
+       - Concept explanations
+       - Additional examples
+       - Related resources
+       - Practice problems
+  </Step>
+</Steps>
+
+## Understanding the processing flow
+
+When you take a screenshot, here's what happens under the hood:
+
+<Steps>
+  <Step title="Screenshot capture">
+    ```typescript
+    // electron/shortcuts.ts:18-36
+    globalShortcut.register("CommandOrControl+H", async () => {
+      const screenshotPath = await this.appState.takeScreenshot()
+      const preview = await this.appState.getImagePreview(screenshotPath)
+      mainWindow.webContents.send("screenshot-taken", {
+        path: screenshotPath,
+        preview
+      })
+      await this.appState.processingHelper.processScreenshots()
+    })
+    ```
+    
+    The screenshot is:
+    1. Captured using `screenshot-desktop` library
+    2. Compressed with Sharp
+    3. Stored temporarily
+    4. Preview generated for UI
+  </Step>
+  
+  <Step title="AI processing">
+    ```typescript
+    // electron/ProcessingHelper.ts:24-48
+    const useOllama = process.env.USE_OLLAMA === "true"
+    const useK2Think = process.env.USE_K2_THINK === "true"
+    const openRouterApiKey = process.env.OPENROUTER_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
+    ```
+    
+    Provider priority:
+    1. K2 Think (if `USE_K2_THINK=true`)
+    2. OpenRouter (if `OPENROUTER_API_KEY` set)
+    3. Gemini (if `GEMINI_API_KEY` set)
+    4. Ollama (if `USE_OLLAMA=true`)
+  </Step>
+  
+  <Step title="Response rendering">
+    The AI response is rendered with:
+    - **react-markdown**: Markdown parsing
+    - **react-syntax-highlighter**: Code syntax highlighting
+    - **rehype-katex**: Math equation rendering
+    - **remark-gfm**: GitHub Flavored Markdown support
+  </Step>
+  
+  <Step title="Cleanup">
+    Screenshots are automatically deleted after processing to protect your privacy.
+  </Step>
+</Steps>
+
+## Advanced tips
+
+### Multiple screenshots for context
+
+<Note>
+  You can take multiple screenshots before processing to give the AI more context.
+</Note>
+
+1. Take first screenshot: `Cmd/Ctrl + H` (auto-processes)
+2. For additional context, manually queue more screenshots
+3. All screenshots are analyzed together
+
+### Reset and start fresh
+
+If you want to start a new analysis:
+
+```bash
+Cmd/Ctrl + R  # Resets queues and cancels ongoing requests
+```
+
+This:
+- Cancels any ongoing API requests
+- Clears screenshot queues
+- Resets view to initial state
+- Deletes screenshot metadata
+
+### Using the tray menu
+
+Cluely adds a menu bar icon (macOS shows "IC"):
+
+- **Double-click**: Show and center window
+- **Right-click menu**:
+  - Show Interview Coder
+  - Toggle Window
+  - Take Screenshot (Cmd+H)
+  - Quit
+
+### Optimize for your use case
+
+<Tabs>
+  <Tab title="Privacy-focused">
+    Use Ollama for 100% local processing:
+    
+    ```env
+    USE_OLLAMA=true
+    OLLAMA_MODEL=llama3.2
+    ```
+    
+    - No data sent to cloud
+    - Works offline
+    - Requires more RAM
+  </Tab>
+  
+  <Tab title="Performance-focused">
+    Use Gemini for fastest responses:
+    
+    ```env
+    GEMINI_API_KEY=your_key_here
+    GEMINI_FALLBACK_API_KEY=backup_key_here
+    ```
+    
+    - Fastest processing
+    - Best accuracy
+    - Requires internet
+    - Fallback key prevents rate limit issues
+  </Tab>
+  
+  <Tab title="Cost-optimized">
+    Use Ollama for routine tasks, Gemini for complex ones:
+    
+    ```env
+    # Both configured
+    USE_OLLAMA=true
+    OLLAMA_MODEL=llama3.2
+    GEMINI_API_KEY=your_key_here
+    ```
+    
+    Toggle in `.env` based on task complexity.
+  </Tab>
+</Tabs>
+
+## Troubleshooting common issues
+
+### Screenshot not capturing
+
+<Warning>
+  On macOS, you need to grant Screen Recording permissions.
+</Warning>
+
+Go to: System Preferences → Security & Privacy → Privacy → Screen Recording
+
+Add and enable Cluely/Electron.
+
+### AI not responding
+
+<Steps>
+  <Step title="Check your configuration">
+    Verify your `.env` file:
+    
+    ```bash
+    cat .env
+    ```
+    
+    Ensure API keys are set correctly (no extra spaces).
+  </Step>
+  
+  <Step title="Verify provider status">
+    <Tabs>
+      <Tab title="Gemini">
+        Test API key:
+        ```bash
+        curl -H "Content-Type: application/json" \
+          -d '{"contents":[{"parts":[{"text":"Hello"}]}]}' \
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=YOUR_API_KEY"
+        ```
+      </Tab>
+      
+      <Tab title="Ollama">
+        Check if Ollama is running:
+        ```bash
+        curl http://localhost:11434/api/tags
+        ```
+        
+        If not running:
+        ```bash
+        ollama serve
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  
+  <Step title="Check console logs">
+    Open DevTools in the Electron window to see error messages.
+  </Step>
+</Steps>
+
+### Window positioning issues
+
+If the window is off-screen or positioned oddly:
+
+```bash
+Cmd/Ctrl + Shift + Space  # Centers and shows window
+```
+
+## What's next?
+
+Now that you're familiar with the basics:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Explore AI Providers" icon="brain">
+    Learn about different AI provider options and how to switch between them
+  </Card>
+  <Card title="Keyboard Shortcuts" icon="keyboard">
+    Master all shortcuts for maximum productivity
+  </Card>
+  <Card title="Privacy & Security" icon="shield">
+    Understand how Cluely protects your data
+  </Card>
+  <Card title="Advanced Configuration" icon="gear">
+    Customize Cluely's behavior and appearance
+  </Card>
 </CardGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Remember: Press `Cmd/Ctrl + Q` to quit the application properly. The close button (X) doesn't work yet.
 </Note>

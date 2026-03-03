@@ -1,0 +1,268 @@
+---
+title: Configuration
+description: Environment variables, settings, and customization options for Cluely
+---
+
+## Environment Variables
+
+Cluely supports multiple AI providers through environment variables. Create a `.env` file in the root directory to configure your preferred AI provider.
+
+### AI Provider Options
+
+<Tabs>
+  <Tab title="Gemini (Cloud AI)">
+    Google Gemini provides the latest AI technology with vision capabilities and fastest responses.
+
+    ```env
+    GEMINI_API_KEY=your_primary_api_key_here
+    GEMINI_FALLBACK_API_KEY=your_backup_api_key_here
+    ```
+
+    <Info>
+      The fallback API key is optional but recommended. If the primary key hits rate limits, Cluely automatically switches to the fallback key.
+    </Info>
+
+    **Get your API key:** [Google AI Studio](https://makersuite.google.com/app/apikey)
+
+    **Configuration details:**
+    - Default model: `gemini-2.5-flash`
+    - Automatic rate limit handling with exponential backoff
+    - Supports both image and audio analysis
+  </Tab>
+
+  <Tab title="Ollama (Local/Private)">
+    Run AI models completely offline on your local machine for maximum privacy.
+
+    ```env
+    USE_OLLAMA=true
+    OLLAMA_MODEL=llama3.2
+    OLLAMA_URL=http://localhost:11434
+    ```
+
+    **Setup steps:**
+    1. Install Ollama from [ollama.ai](https://ollama.ai)
+    2. Pull a model: `ollama pull llama3.2`
+    3. Start Ollama service: `ollama serve`
+    4. Set environment variables as shown above
+
+    **Supported models:**
+    - `llama3.2` - Meta's advanced local model
+    - `gemma:latest` - Default fallback model
+    - `codellama` - Specialized for coding tasks
+    - `mistral` - Lightweight and fast
+    - Any Ollama-compatible model
+
+    <Note>
+      Cluely automatically detects and uses the first available Ollama model if the specified model isn't found.
+    </Note>
+  </Tab>
+
+  <Tab title="OpenRouter">
+    Access multiple AI models through OpenRouter's unified API.
+
+    ```env
+    OPENROUTER_API_KEY=your_openrouter_api_key_here
+    OPENROUTER_MODEL=google/gemini-2.5-flash
+    ```
+
+    **Configuration:**
+    - Default model: `google/gemini-2.5-flash`
+    - API endpoint: `https://openrouter.ai/api/v1/chat/completions`
+    - Supports custom model selection
+  </Tab>
+
+  <Tab title="K2 Think V2">
+    High reasoning AI model for complex problem-solving.
+
+    ```env
+    K2_THINK_API_KEY=your_k2_think_api_key_here
+    USE_K2_THINK=true
+    ```
+
+    **Features:**
+    - Model: `MBZUAI-IFM/K2-Think-v2`
+    - Uses local OCR (Tesseract.js) for image text extraction
+    - No image data sent to cloud - only extracted text
+    - API endpoint: `https://api.k2think.ai/v1/chat/completions`
+
+    <Warning>
+      K2 Think uses free local OCR to extract text from screenshots before sending to the API. This adds processing time but enhances privacy.
+    </Warning>
+  </Tab>
+</Tabs>
+
+## Application Settings
+
+### Window Configuration
+
+Cluely's main window is configured in `electron/main.ts` with these settings:
+
+```typescript
+// Window dimensions
+width: 800
+height: 600
+
+// Window behavior
+alwaysOnTop: true        // Stays above other windows
+focusable: true          // Can receive keyboard focus
+resizable: true          // User can resize
+frame: false             // Frameless window
+transparent: true        // Transparent background
+```
+
+### Screenshot Settings
+
+Screenshot behavior is controlled in `electron/ScreenshotHelper.ts`:
+
+- **Maximum screenshots:** 5 per queue
+- **Storage locations:**
+  - Primary queue: `~/Library/Application Support/interview-coder/screenshots/`
+  - Extra queue: `~/Library/Application Support/interview-coder/extra_screenshots/`
+- **Format:** PNG
+- **Auto-cleanup:** Old screenshots are automatically deleted when queue exceeds limit
+
+<Accordion title="Screenshot cleanup details">
+  When you take a screenshot:
+  1. Window hides automatically (100ms delay)
+  2. Screenshot is saved to appropriate queue directory
+  3. If queue exceeds 5 screenshots, oldest is deleted
+  4. Window reappears after capture
+  5. Screenshots are deleted from disk when removed from queue
+</Accordion>
+
+## Model Configuration
+
+### LLM Parameters
+
+All AI providers use these default parameters (defined in `electron/LLMHelper.ts`):
+
+```typescript
+temperature: 0.7    // Creativity vs consistency
+top_p: 0.9          // Nucleus sampling (Ollama)
+max_tokens: 4096    // Maximum response length (OpenRouter)
+```
+
+### System Prompt
+
+Cluely uses a specialized system prompt to provide helpful, structured responses:
+
+```text
+You are Wingman AI, a helpful, proactive assistant for any kind of problem or situation.
+
+CRITICAL: You MUST use Markdown for all responses.
+1. Use headers (#, ##), lists (* or 1.), and bold text
+2. Use LaTeX for ALL mathematical formulas and equations
+   - Block equations: $$x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}$$
+   - Inline math: $E=mc^2$
+3. Use code blocks with language specification
+4. Analyze the situation and suggest several possible responses
+5. Always explain your reasoning
+```
+
+## Development Configuration
+
+### Running in Development Mode
+
+The `package.json` defines these development scripts:
+
+```bash
+# Start development server (port 5180)
+npm run dev
+
+# Start Electron in development mode
+npm run electron:dev
+
+# Start both concurrently
+npm start
+```
+
+<Info>
+  The `npm start` command automatically starts Vite dev server on port 5180, waits for it to be ready, then launches Electron.
+</Info>
+
+### Build Configuration
+
+```bash
+# Build for production
+npm run build
+
+# Create distributable
+npm run dist
+```
+
+**Build outputs:**
+- macOS: DMG installer for x64 and arm64
+- Windows: NSIS installer and portable executable
+- Linux: AppImage and DEB package
+
+### Port Configuration
+
+<Warning>
+  Cluely requires port 5180 for the Vite development server. If another application is using this port, the app will fail to start.
+</Warning>
+
+To check and free port 5180:
+
+```bash
+# Find processes using port 5180
+lsof -i :5180
+
+# Kill the process (replace [PID] with actual process ID)
+kill [PID]
+```
+
+## Advanced Configuration
+
+### Switching AI Providers at Runtime
+
+Cluely supports switching between AI providers without restarting:
+
+```typescript
+// Switch to Ollama
+await llmHelper.switchToOllama('llama3.2', 'http://localhost:11434')
+
+// Switch to Gemini
+await llmHelper.switchToGemini('your-api-key', 'models/gemini-2.5-flash')
+
+// Switch to OpenRouter
+await llmHelper.switchToOpenRouter('your-api-key', 'google/gemini-2.5-flash')
+
+// Switch to K2 Think
+await llmHelper.switchToK2Think('your-api-key')
+```
+
+### Connection Testing
+
+Test your AI provider connection:
+
+```typescript
+const result = await llmHelper.testConnection()
+if (result.success) {
+  console.log('Connected successfully')
+} else {
+  console.error('Connection failed:', result.error)
+}
+```
+
+## Installation Workarounds
+
+### Sharp Build Errors
+
+If you encounter Python or Sharp build errors during `npm install`:
+
+```bash
+# Use prebuilt binaries (recommended)
+rm -rf node_modules package-lock.json
+SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --ignore-scripts
+npm rebuild sharp
+```
+
+The `postinstall` script automatically handles this:
+
+```json
+"postinstall": "cross-env SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm rebuild sharp"
+```
+
+<Accordion title="Why does Sharp cause build errors?">
+  Sharp is an image processing library that requires native binaries. The `SHARP_IGNORE_GLOBAL_LIBVIPS=1` flag tells Sharp to use prebuilt binaries instead of compiling from source, avoiding the need for Python and build tools.
+</Accordion>

@@ -1,0 +1,647 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Cluely desktop app
+---
+
+## Installation Issues
+
+### Sharp/Python Build Errors
+
+If you see `gyp ERR! find Python` or Sharp build errors during installation:
+
+<Accordion title="Error: Cannot find module 'sharp'">
+  **Symptoms:**
+  ```
+  gyp ERR! find Python
+  gyp ERR! stack Error: Could not find any Python installation
+  ```
+
+  **Solution 1: Use prebuilt binaries (recommended)**
+  ```bash
+  # Remove existing installation
+  rm -rf node_modules package-lock.json
+
+  # Install with Sharp prebuilt binaries
+  SHARP_IGNORE_GLOBAL_LIBVIPS=1 npm install --ignore-scripts
+
+  # Rebuild Sharp
+  npm rebuild sharp
+  ```
+
+  **Solution 2: Install Python (if you prefer building from source)**
+  ```bash
+  # macOS
+  brew install python3
+
+  # Then run
+  npm install
+  ```
+
+  <Info>
+    The `postinstall` script in `package.json` automatically runs `npm rebuild sharp` with the ignore flag, so this should be handled automatically.
+  </Info>
+</Accordion>
+
+### General Installation Errors
+
+<Steps>
+  <Step title="Clean install">
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Step>
+
+  <Step title="Verify Node.js version">
+    ```bash
+    node --version  # Should be 18.x or higher
+    ```
+  </Step>
+
+  <Step title="Try running the app">
+    ```bash
+    npm start
+    ```
+  </Step>
+</Steps>
+
+## Application Startup Issues
+
+### Port 5180 Already in Use
+
+<Accordion title="Error: Port 5180 is already in use">
+  **Symptoms:**
+  - App fails to start
+  - Error message about port 5180
+  - Vite dev server won't start
+
+  **Solution:**
+  ```bash
+  # Find processes using port 5180
+  lsof -i :5180
+
+  # Kill the process (replace [PID] with the actual process ID)
+  kill [PID]
+
+  # Or force kill if needed
+  kill -9 [PID]
+  ```
+
+  **Windows:**
+  ```cmd
+  # Find process using port 5180
+  netstat -ano | findstr :5180
+
+  # Kill the process (replace [PID] with the process ID)
+  taskkill /PID [PID] /F
+  ```
+</Accordion>
+
+### App Window Doesn't Appear
+
+<Accordion title="App starts but window is invisible">
+  **Symptoms:**
+  - Process is running in Activity Monitor/Task Manager
+  - No window visible on screen
+  - No errors in terminal
+
+  **Solutions:**
+
+  **1. Use keyboard shortcut to show window:**
+  - Press `Cmd + B` (macOS) or `Ctrl + B` (Windows/Linux)
+  - This toggles window visibility
+
+  **2. Use the tray icon:**
+  - Look for "IC" in your system tray/menu bar
+  - Right-click and select "Show Interview Coder"
+  - Or double-click the tray icon
+
+  **3. Check if window is off-screen:**
+  ```bash
+  # Quit the app
+  # Delete window position preferences
+  rm -rf ~/Library/Application\ Support/interview-coder/
+  # Restart the app
+  ```
+</Accordion>
+
+### Electron Crashes on Startup
+
+<Accordion title="Electron app crashes immediately">
+  **Fixed in recent updates:**
+  - Improved error handling
+  - Production config updated
+  - Platform-specific fixes applied
+
+  **If still crashing:**
+
+  <Steps>
+    <Step title="Check Electron version">
+      ```bash
+      npm list electron
+      # Should be 33.2.0 or higher
+      ```
+    </Step>
+
+    <Step title="Rebuild native modules">
+      ```bash
+      npm rebuild
+      ```
+    </Step>
+
+    <Step title="Run in development mode for debugging">
+      ```bash
+      npm run electron:dev
+      ```
+      Check console output for specific error messages.
+    </Step>
+  </Steps>
+</Accordion>
+
+## AI Provider Issues
+
+### Ollama Connection Failed
+
+<Accordion title="Error: Failed to connect to Ollama">
+  **Symptoms:**
+  ```
+  Failed to connect to Ollama: Error: connect ECONNREFUSED 127.0.0.1:11434
+  Make sure Ollama is running on http://localhost:11434
+  ```
+
+  **Solution:**
+
+  <Steps>
+    <Step title="Verify Ollama is installed">
+      ```bash
+      ollama --version
+      ```
+      If not installed, download from [ollama.ai](https://ollama.ai)
+    </Step>
+
+    <Step title="Start Ollama service">
+      ```bash
+      ollama serve
+      ```
+      Leave this running in a terminal.
+    </Step>
+
+    <Step title="Verify Ollama is accessible">
+      ```bash
+      curl http://localhost:11434/api/tags
+      ```
+      Should return a JSON list of models.
+    </Step>
+
+    <Step title="Pull a model if needed">
+      ```bash
+      ollama pull llama3.2
+      ```
+    </Step>
+
+    <Step title="Update .env file">
+      ```env
+      USE_OLLAMA=true
+      OLLAMA_MODEL=llama3.2
+      OLLAMA_URL=http://localhost:11434
+      ```
+    </Step>
+  </Steps>
+
+  <Info>
+    Cluely automatically detects the first available Ollama model if your specified model isn't found.
+  </Info>
+</Accordion>
+
+### Gemini API Key Errors
+
+<Accordion title="Error: 401 Unauthorized or Invalid API Key">
+  **Symptoms:**
+  ```
+  Error: API key not valid. Please pass a valid API key.
+  ```
+
+  **Solutions:**
+
+  <Steps>
+    <Step title="Verify API key format">
+      Gemini API keys start with `AIza` and are 39 characters long.
+
+      Example: `AIzaSyDHqiRnb...` (shown in README.md:41)
+    </Step>
+
+    <Step title="Check .env file">
+      ```env
+      GEMINI_API_KEY=AIzaSyDHqiRnb...
+      ```
+      - No spaces around the `=`
+      - No quotes around the key
+      - File is named exactly `.env` (not `.env.txt`)
+    </Step>
+
+    <Step title="Verify API key is active">
+      1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+      2. Check if your API key is enabled
+      3. Generate a new key if needed
+    </Step>
+
+    <Step title="Restart the app">
+      After updating `.env`, restart Cluely completely.
+    </Step>
+  </Steps>
+</Accordion>
+
+<Accordion title="Error: 429 Rate Limit Exceeded">
+  **Symptoms:**
+  ```
+  [LLMHelper] Rate limit hit, switching to fallback API key...
+  ```
+
+  **Solution:**
+
+  Cluely automatically switches to your fallback API key if configured:
+
+  ```env
+  GEMINI_API_KEY=your_primary_key
+  GEMINI_FALLBACK_API_KEY=your_backup_key
+  ```
+
+  **Rate limit details:**
+  - Gemini free tier has usage quotas
+  - Cluely implements exponential backoff (1s, 2s, 4s delays)
+  - Automatic failover to fallback key
+
+  <Note>
+    From `electron/LLMHelper.ts:139-146`, Cluely detects rate limits and switches keys automatically.
+  </Note>
+</Accordion>
+
+<Accordion title="Error: 503 Model Overloaded">
+  **Symptoms:**
+  ```
+  [LLMHelper] Model overloaded, retrying in 1000ms... (attempt 1/3)
+  ```
+
+  **Automatic handling:**
+  - Cluely retries automatically (up to 3 attempts)
+  - Uses exponential backoff: 1s → 2s → 4s
+  - Usually resolves within a few seconds
+
+  **If persistent:**
+  - Wait a few minutes and try again
+  - Google's servers may be experiencing high load
+  - Consider switching to Ollama for offline usage
+</Accordion>
+
+### OpenRouter Issues
+
+<Accordion title="OpenRouter API errors">
+  **Common errors:**
+
+  **1. Invalid API Key**
+  ```env
+  OPENROUTER_API_KEY=your_actual_api_key_here
+  ```
+
+  **2. Model not found**
+  ```env
+  OPENROUTER_MODEL=google/gemini-2.5-flash
+  ```
+  Verify model name at [openrouter.ai/models](https://openrouter.ai/models)
+
+  **3. Insufficient credits**
+  - Check your OpenRouter account balance
+  - Add credits if needed
+</Accordion>
+
+## Platform-Specific Issues
+
+### Windows Issues (Fixed)
+
+<Info>
+  Recent updates have fixed common Windows issues:
+  - ✅ UI not loading (port mismatch resolved)
+  - ✅ Electron crashes (improved error handling)
+  - ✅ Build failures (production config updated)
+  - ✅ Window focus problems (platform-specific fixes applied)
+</Info>
+
+**If you still encounter issues on Windows 10/11:**
+
+<Steps>
+  <Step title="Run as administrator">
+    Right-click the app and select "Run as administrator"
+  </Step>
+
+  <Step title="Check Windows Defender">
+    Add exception for the app directory in Windows Defender
+  </Step>
+
+  <Step title="Verify .NET Framework">
+    Ensure .NET Framework 4.5+ is installed
+  </Step>
+</Steps>
+
+### Ubuntu/Linux Issues (Fixed)
+
+<Info>
+  Recent updates have fixed common Linux issues:
+  - ✅ Window interaction (fixed focusable settings)
+  - ✅ Installation confusion (clear setup instructions)
+  - ✅ Missing dependencies (all requirements documented)
+</Info>
+
+**Tested on:** Ubuntu 20.04+ and most major distributions
+
+**If you encounter issues:**
+
+<Accordion title="Missing system dependencies">
+  ```bash
+  # Ubuntu/Debian
+  sudo apt-get install -y libgtk-3-0 libnotify4 libnss3 \
+    libxss1 libxtst6 xdg-utils libatspi2.0-0 libdrm2 \
+    libgbm1 libxcb-dri3-0
+
+  # Fedora
+  sudo dnf install -y gtk3 libnotify nss libXScrnSaver \
+    libXtst xdg-utils at-spi2-atk libdrm mesa-libgbm
+  ```
+</Accordion>
+
+### macOS Issues
+
+<Accordion title="macOS Gatekeeper warnings">
+  **Symptoms:**
+  - "App is damaged and can't be opened"
+  - "App is from an unidentified developer"
+
+  **Solution:**
+  ```bash
+  # Remove quarantine attribute
+  xattr -cr /path/to/Interview\ Coder.app
+
+  # Or allow in System Preferences
+  # System Preferences → Security & Privacy → General
+  # Click "Open Anyway"
+  ```
+</Accordion>
+
+## Window Management Issues
+
+### Can't Close the App
+
+<Warning>
+  **Known issue:** The X button currently doesn't work.
+</Warning>
+
+**Solutions:**
+
+<Tabs>
+  <Tab title="Keyboard Shortcut">
+    Press `Cmd + Q` (macOS) or `Ctrl + Q` (Windows/Linux) to quit.
+  </Tab>
+
+  <Tab title="Tray Menu">
+    Right-click the tray icon and select "Quit"
+  </Tab>
+
+  <Tab title="Activity Monitor/Task Manager">
+    **macOS:**
+    1. Open Activity Monitor
+    2. Search for "Interview Coder"
+    3. Select and click "Force Quit"
+
+    **Windows:**
+    1. Open Task Manager (Ctrl + Shift + Esc)
+    2. Find "Interview Coder"
+    3. Right-click and select "End Task"
+
+    **Linux:**
+    ```bash
+    pkill -f interview-coder
+    ```
+  </Tab>
+</Tabs>
+
+### Window Focus Problems
+
+<Accordion title="Window doesn't stay on top">
+  **Expected behavior:**
+  - Window should always stay on top of other windows
+  - Configured with `alwaysOnTop: true` in `electron/main.ts`
+
+  **If not working:**
+  1. Toggle window visibility: `Cmd/Ctrl + B`
+  2. This resets the window state
+  3. Platform-specific fixes have been applied in recent updates
+</Accordion>
+
+## Screenshot Issues
+
+### Screenshots Not Saving
+
+<Accordion title="Screenshot taken but not visible in app">
+  **Check screenshot directories:**
+
+  ```bash
+  # macOS
+  ls -la ~/Library/Application\ Support/interview-coder/screenshots/
+
+  # Windows
+  dir %APPDATA%\interview-coder\screenshots
+
+  # Linux
+  ls -la ~/.config/interview-coder/screenshots/
+  ```
+
+  **If empty:**
+  1. Check disk space
+  2. Verify write permissions
+  3. Check console for error messages
+</Accordion>
+
+### Screenshot Keyboard Shortcut Not Working
+
+<Accordion title="Cmd/Ctrl + H doesn't take screenshot">
+  **Troubleshooting:**
+
+  <Steps>
+    <Step title="Check for conflicts">
+      Another app may be using the same shortcut.
+
+      **macOS:** System Preferences → Keyboard → Shortcuts
+      **Windows:** Check other running applications
+    </Step>
+
+    <Step title="Use tray menu instead">
+      Right-click tray icon → "Take Screenshot (Cmd+H)"
+    </Step>
+
+    <Step title="Verify global shortcuts are registered">
+      From `electron/main.ts:303`:
+      ```typescript
+      appState.shortcutsHelper.registerGlobalShortcuts()
+      ```
+      Should run on app startup.
+    </Step>
+  </Steps>
+</Accordion>
+
+## Performance Issues
+
+### Slow AI Responses
+
+<Accordion title="AI takes too long to respond">
+  **Factors affecting speed:**
+
+  | Provider | Speed | Notes |
+  |----------|-------|-------|
+  | Gemini | Fast (1-3s) | Cloud AI, requires internet |
+  | Ollama | Varies | Depends on your CPU/GPU |
+  | OpenRouter | Medium (2-5s) | Depends on selected model |
+  | K2 Think | Slower | Local OCR adds processing time |
+
+  **Optimization tips:**
+
+  **For Ollama:**
+  ```bash
+  # Use a smaller, faster model
+  ollama pull gemma:2b  # Smaller = faster
+  ```
+
+  ```env
+  OLLAMA_MODEL=gemma:2b
+  ```
+
+  **For all providers:**
+  - Take fewer screenshots (each image adds processing time)
+  - Keep prompts concise
+  - Close other resource-intensive apps
+</Accordion>
+
+### High Memory Usage
+
+<Accordion title="App uses too much RAM">
+  **Expected memory usage:**
+  - Without Ollama: 200-500 MB
+  - With Ollama: 2-8 GB (depending on model size)
+
+  **Reducing memory usage:**
+
+  **1. Use smaller Ollama models:**
+  ```bash
+  ollama pull gemma:2b    # ~1.4 GB
+  # vs
+  ollama pull llama3.2    # ~4.7 GB
+  ```
+
+  **2. Clear screenshot queues:**
+  - Delete old screenshots from the app
+  - Each screenshot is stored in memory as base64
+
+  **3. Switch to cloud AI:**
+  - Gemini has much lower local memory requirements
+  - Trade-off: Privacy vs performance
+</Accordion>
+
+## Build and Distribution Issues
+
+### Build Fails
+
+<Accordion title="npm run dist fails">
+  **Common errors:**
+
+  **1. Missing build tools:**
+  ```bash
+  # macOS
+  xcode-select --install
+
+  # Windows - Install Windows Build Tools
+  npm install --global windows-build-tools
+
+  # Linux
+  sudo apt-get install build-essential
+  ```
+
+  **2. Clean build:**
+  ```bash
+  npm run clean
+  npm run build
+  npm run dist
+  ```
+
+  **3. Check disk space:**
+  - Building requires 2-5 GB free space
+  - Output goes to `release/` directory
+</Accordion>
+
+## Debug Mode
+
+### Enable Verbose Logging
+
+Run in development mode to see detailed logs:
+
+```bash
+# Terminal 1: Start Vite dev server
+npm run dev
+
+# Terminal 2: Start Electron with dev tools
+NODE_ENV=development npm run electron:dev
+```
+
+**Developer tools:**
+- Press `Cmd/Ctrl + Shift + I` to open DevTools
+- Check Console tab for errors
+- Check Network tab for API calls
+- Check Application tab for local storage
+
+## Getting Help
+
+### Reporting Issues
+
+If you encounter an issue not covered here:
+
+<Steps>
+  <Step title="Gather information">
+    - Operating system and version
+    - Node.js version (`node --version`)
+    - Electron version (`npm list electron`)
+    - Error messages from console
+    - Steps to reproduce
+  </Step>
+
+  <Step title="Check existing issues">
+    Search the GitHub repository for similar issues.
+  </Step>
+
+  <Step title="Create detailed issue report">
+    Include:
+    - Clear description of the problem
+    - Expected vs actual behavior
+    - Error messages (full stack trace)
+    - Environment details
+    - Screenshots if relevant
+  </Step>
+</Steps>
+
+### System Requirements Check
+
+<Accordion title="Verify your system meets minimum requirements">
+  **Minimum:**
+  - 4GB RAM
+  - Dual-core CPU
+  - 2GB free storage
+  - Internet connection (for cloud AI)
+
+  **Recommended:**
+  - 8GB+ RAM
+  - Quad-core CPU
+  - 5GB+ free storage
+  - High-speed internet
+
+  **Optimal (for Ollama):**
+  - 16GB+ RAM
+  - 8+ core CPU or dedicated GPU
+  - 10GB+ free storage
+  - SSD storage
+</Accordion>

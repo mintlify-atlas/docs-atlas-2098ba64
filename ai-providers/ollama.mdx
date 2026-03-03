@@ -1,0 +1,400 @@
+---
+title: Ollama Local AI Setup
+description: Configure Ollama for 100% private, local AI processing with no API costs
+---
+
+Ollama provides completely private AI processing on your local machine. Data never leaves your computer, there are no API costs, and you can work offline.
+
+## Why Choose Ollama?
+
+<CardGroup cols={2}>
+  <Card title="100% Private" icon="lock">
+    All processing happens locally - your data never leaves your computer
+  </Card>
+  <Card title="Zero Cost" icon="dollar-sign">
+    No API fees or usage limits - completely free to use
+  </Card>
+  <Card title="Works Offline" icon="wifi-off">
+    No internet connection required after model download
+  </Card>
+  <Card title="Multiple Models" icon="layers">
+    Support for Llama, Mistral, CodeLlama, Gemma, and more
+  </Card>
+</CardGroup>
+
+## System Requirements
+
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| **RAM** | 8GB | 16GB+ |
+| **Storage** | 5GB | 10GB+ |
+| **CPU** | Dual-core | Quad-core+ |
+| **GPU** | Optional | NVIDIA/AMD for faster inference |
+
+<Note>
+  Models vary in size. Smaller models (7B parameters) need ~4GB RAM, while larger models (13B+) may need 16GB or more.
+</Note>
+
+## Installation
+
+<Steps>
+  <Step title="Install Ollama">
+    Download and install Ollama from [ollama.ai](https://ollama.ai)
+    
+    <CodeGroup>
+      ```bash macOS
+      # Download from ollama.ai or use brew
+      brew install ollama
+      ```
+      
+      ```bash Linux
+      curl -fsSL https://ollama.ai/install.sh | sh
+      ```
+      
+      ```bash Windows
+      # Download installer from ollama.ai
+      # Or use Windows Subsystem for Linux (WSL)
+      ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Start Ollama Service">
+    Ollama runs as a background service:
+    
+    ```bash
+    ollama serve
+    ```
+    
+    <Note>
+      On macOS/Windows, Ollama starts automatically. On Linux, you may need to run this command.
+    </Note>
+  </Step>
+  
+  <Step title="Pull a Model">
+    Download an AI model to use with Cluely:
+    
+    ```bash
+    # Recommended: Llama 3.2 (balanced performance)
+    ollama pull llama3.2
+    
+    # Alternative: Gemma (lightweight)
+    ollama pull gemma:latest
+    
+    # For coding: CodeLlama
+    ollama pull codellama
+    
+    # For speed: Mistral
+    ollama pull mistral
+    ```
+    
+    <Warning>
+      First model download can take 5-30 minutes depending on model size and internet speed.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure Cluely">
+    Add Ollama settings to your `.env` file:
+    
+    ```env
+    USE_OLLAMA=true
+    OLLAMA_MODEL=llama3.2
+    OLLAMA_URL=http://localhost:11434
+    ```
+  </Step>
+  
+  <Step title="Verify Setup">
+    Start Cluely and check for:
+    
+    ```bash
+    [LLMHelper] Using Ollama with model: llama3.2
+    ```
+  </Step>
+</Steps>
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|--------|
+| `USE_OLLAMA` | Yes | Enable Ollama mode | `false` |
+| `OLLAMA_MODEL` | No | Model to use | `gemma:latest` |
+| `OLLAMA_URL` | No | Ollama API endpoint | `http://localhost:11434` |
+
+### Supported Models
+
+Cluely works with any Ollama model, but these are recommended:
+
+<Tabs>
+  <Tab title="Llama 3.2">
+    **Best for**: General purpose, balanced performance
+    
+    ```bash
+    ollama pull llama3.2
+    ```
+    
+    - **Size**: ~4.7GB
+    - **Parameters**: 7B
+    - **Speed**: Fast
+    - **Quality**: Excellent
+  </Tab>
+  
+  <Tab title="Gemma">
+    **Best for**: Lightweight, fast responses
+    
+    ```bash
+    ollama pull gemma:latest
+    ```
+    
+    - **Size**: ~2.5GB
+    - **Parameters**: 2B-7B
+    - **Speed**: Very Fast
+    - **Quality**: Good
+  </Tab>
+  
+  <Tab title="CodeLlama">
+    **Best for**: Programming and code analysis
+    
+    ```bash
+    ollama pull codellama
+    ```
+    
+    - **Size**: ~7GB
+    - **Parameters**: 13B
+    - **Speed**: Moderate
+    - **Quality**: Excellent for code
+  </Tab>
+  
+  <Tab title="Mistral">
+    **Best for**: Fast, efficient responses
+    
+    ```bash
+    ollama pull mistral
+    ```
+    
+    - **Size**: ~4.1GB
+    - **Parameters**: 7B
+    - **Speed**: Very Fast
+    - **Quality**: Very Good
+  </Tab>
+</Tabs>
+
+### Model Auto-Detection
+
+Cluely automatically detects and uses available models:
+
+```typescript
+// Auto-detection logic (source/electron/LLMHelper.ts:331-335)
+if (!availableModels.includes(this.ollamaModel)) {
+  this.ollamaModel = availableModels[0]
+  console.log(`[LLMHelper] Auto-selected first available model: ${this.ollamaModel}`)
+}
+```
+
+If your configured model isn't found, Cluely uses the first available model automatically.
+
+## API Configuration
+
+### Request Parameters
+
+Cluely sends optimized parameters to Ollama:
+
+```typescript
+// Ollama request configuration (source/electron/LLMHelper.ts:211-218)
+{
+  model: this.ollamaModel,
+  prompt: prompt,
+  stream: false,
+  options: {
+    temperature: 0.7,    // Balanced creativity
+    top_p: 0.9          // High-quality responses
+  }
+}
+```
+
+### Endpoint
+
+Ollama API endpoint:
+
+```
+POST http://localhost:11434/api/generate
+```
+
+<Note>
+  Change `OLLAMA_URL` if running Ollama on a different host or port.
+</Note>
+
+## Limitations with Ollama
+
+<Warning>
+  Ollama has some limitations compared to cloud providers:
+</Warning>
+
+### Vision/Image Analysis
+
+Ollama **cannot** directly analyze images. For screenshot analysis:
+
+1. Images are skipped, and generic guidance is provided
+2. Consider using Gemini for vision features alongside Ollama for text
+
+```typescript
+// Ollama limitation note from source
+// OpenRouter implementation shows guidance-only approach for images
+```
+
+### Audio Processing
+
+<Note>
+  Voice features always use Gemini, even when Ollama is enabled for text chat.
+</Note>
+
+Cluely maintains a separate Gemini client for audio processing:
+
+```typescript
+// Requires GEMINI_API_KEY for voice features
+private geminiVoiceClient: GoogleGenAI | null = null
+```
+
+## Managing Models
+
+### List Available Models
+
+```bash
+ollama list
+```
+
+### Remove a Model
+
+```bash
+ollama rm llama3.2
+```
+
+### Update a Model
+
+```bash
+ollama pull llama3.2
+```
+
+### Check Model Info
+
+```bash
+ollama show llama3.2
+```
+
+## Performance Optimization
+
+<AccordionGroup>
+  <Accordion title="Choose the Right Model Size">
+    - **2-7B parameters**: Fast, lower memory (4-8GB RAM)
+    - **13B parameters**: Slower, higher quality (16GB+ RAM)
+    - **70B+ parameters**: Very slow, best quality (64GB+ RAM, GPU recommended)
+    
+    For most users: **llama3.2 (7B)** offers the best balance.
+  </Accordion>
+  
+  <Accordion title="GPU Acceleration">
+    Ollama automatically uses GPU if available:
+    
+    - **NVIDIA**: CUDA support built-in
+    - **AMD**: ROCm support on Linux
+    - **Apple Silicon**: Metal acceleration on macOS
+    
+    Check GPU usage:
+    ```bash
+    ollama ps
+    ```
+  </Accordion>
+  
+  <Accordion title="Memory Management">
+    Ollama keeps models in memory for faster responses:
+    
+    - Models stay loaded for ~5 minutes after last use
+    - Automatically unloaded when memory is needed
+    - Preload models: Send a test prompt on startup
+  </Accordion>
+</AccordionGroup>
+
+## Switching to Ollama
+
+### At Startup
+
+Set environment variables in `.env`:
+
+```env
+USE_OLLAMA=true
+OLLAMA_MODEL=llama3.2
+```
+
+### At Runtime
+
+Switch from another provider to Ollama:
+
+```typescript
+// Switch to Ollama with specific model
+await llmHelper.switchToOllama('llama3.2', 'http://localhost:11434')
+
+// Switch to Ollama with auto-detected model
+await llmHelper.switchToOllama()
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Ollama Not Available">
+    **Error**: `Failed to connect to Ollama: Make sure Ollama is running on http://localhost:11434`
+    
+    **Solutions**:
+    1. Check Ollama is running: `ollama list`
+    2. Start Ollama: `ollama serve`
+    3. Verify port 11434 is not blocked by firewall
+    4. Check `OLLAMA_URL` matches your setup
+  </Accordion>
+  
+  <Accordion title="No Models Found">
+    **Error**: `[LLMHelper] No Ollama models found`
+    
+    **Solutions**:
+    1. Pull a model: `ollama pull llama3.2`
+    2. Verify with: `ollama list`
+    3. Check Ollama data directory has sufficient space
+  </Accordion>
+  
+  <Accordion title="Slow Responses">
+    **Issue**: Model takes too long to respond
+    
+    **Solutions**:
+    1. Use a smaller model (e.g., `gemma` instead of `codellama`)
+    2. Ensure sufficient RAM is available
+    3. Enable GPU acceleration if available
+    4. Close other memory-intensive applications
+  </Accordion>
+  
+  <Accordion title="Model Selection Not Working">
+    **Issue**: Configured model not being used
+    
+    **Solutions**:
+    1. Verify model is pulled: `ollama list`
+    2. Check exact model name matches (case-sensitive)
+    3. Let Cluely auto-detect: Remove `OLLAMA_MODEL` from `.env`
+    4. Restart Cluely after changing models
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+1. **Start with llama3.2**: Best balance of speed, quality, and resource usage
+2. **Preload on startup**: Send a test prompt when app starts to keep model in memory
+3. **Monitor memory**: Use Activity Monitor/Task Manager to ensure sufficient RAM
+4. **Keep models updated**: Periodically `ollama pull` to get model improvements
+5. **Use SSD storage**: Store Ollama models on SSD for faster loading
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Gemini Setup" icon="google" href="/ai-providers/gemini">
+    Add Gemini for vision and audio features
+  </Card>
+  <Card title="Provider Comparison" icon="comparison" href="/ai-providers/overview">
+    Compare all available AI providers
+  </Card>
+</CardGroup>

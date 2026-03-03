@@ -1,0 +1,253 @@
+---
+title: Google Gemini Setup
+description: Configure Google Gemini for fast, accurate AI responses with native vision capabilities
+---
+
+Google Gemini is Cluely's default AI provider, offering the latest AI technology with native vision capabilities and fastest response times.
+
+## Features
+
+- **Latest AI Technology**: Gemini 2.5 Flash with advanced reasoning
+- **Native Vision**: Direct image and screenshot analysis
+- **Audio Processing**: Built-in transcription and audio analysis
+- **Fast Responses**: Cloud-optimized for minimal latency
+- **Automatic Fallback**: Switch to backup API key on rate limits
+
+## Setup
+
+<Steps>
+  <Step title="Get API Key">
+    Visit [Google AI Studio](https://makersuite.google.com/app/apikey) and create a new API key.
+    
+    <Note>
+      You can create multiple API keys for fallback protection against rate limits.
+    </Note>
+  </Step>
+  
+  <Step title="Configure Environment">
+    Add your API key(s) to the `.env` file in the project root:
+    
+    ```env
+    GEMINI_API_KEY=your_primary_api_key_here
+    GEMINI_FALLBACK_API_KEY=your_backup_api_key_here
+    ```
+    
+    <Warning>
+      Keep your API keys secure. Never commit `.env` files to version control.
+    </Warning>
+  </Step>
+  
+  <Step title="Verify Configuration">
+    Start Cluely and check the console for:
+    
+    ```bash
+    [LLMHelper] Using Google Gemini
+    ```
+  </Step>
+</Steps>
+
+## Configuration Options
+
+### Environment Variables
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|--------|
+| `GEMINI_API_KEY` | Yes* | Primary API key | - |
+| `GEMINI_FALLBACK_API_KEY` | No | Backup API key for rate limits | - |
+
+<Note>
+  *Required unless using Ollama, OpenRouter, or K2 Think V2
+</Note>
+
+### Default Model
+
+Cluely uses `models/gemini-2.5-flash` by default for optimal balance of speed and quality.
+
+```typescript
+// Default configuration (source/electron/LLMHelper.ts:26)
+private geminiModel: string = "models/gemini-2.5-flash"
+```
+
+### Switching to Gemini at Runtime
+
+```typescript
+// Switch from another provider to Gemini
+await llmHelper.switchToGemini(apiKey, model)
+
+// Or use default configuration
+await llmHelper.switchToGemini()
+```
+
+## Features in Detail
+
+### Automatic Fallback
+
+When rate limits are hit, Cluely automatically switches to your fallback API key:
+
+```typescript
+// Automatic fallback logic (source/electron/LLMHelper.ts:139-145)
+if (isRateLimitError && !this.usingFallbackKey && this.fallbackGeminiApiKey) {
+  console.log(`[LLMHelper] Rate limit hit, switching to fallback API key...`);
+  this.geminiApiKey = this.fallbackGeminiApiKey;
+  this.model = new GoogleGenAI({ apiKey: this.fallbackGeminiApiKey });
+  this.usingFallbackKey = true;
+}
+```
+
+<Note>
+  Set up a fallback key to avoid interruptions during high usage periods.
+</Note>
+
+### Error Handling
+
+Cluely includes retry logic with exponential backoff for transient errors:
+
+<Tabs>
+  <Tab title="Rate Limits">
+    Automatically retries with fallback API key when available.
+    
+    Detected error patterns:
+    - HTTP 429 status
+    - "quota" in error message
+    - "RATE_LIMIT" or "RESOURCE_EXHAUSTED" errors
+  </Tab>
+  
+  <Tab title="Service Overload">
+    Automatically retries up to 3 times with exponential backoff:
+    
+    - 1st retry: 1 second delay
+    - 2nd retry: 2 second delay
+    - 3rd retry: 4 second delay
+    
+    Triggered by HTTP 503 errors.
+  </Tab>
+</Tabs>
+
+### Vision Capabilities
+
+Gemini provides native image analysis for screenshots:
+
+```typescript
+// Image analysis example
+const imageParts = await Promise.all(
+  imagePaths.map(path => this.fileToGenerativePart(path))
+)
+
+const result = await this.generateContentWithRetry([
+  { parts: [{ text: prompt }, ...imageParts] }
+])
+```
+
+**Supported Features:**
+- Screenshot analysis for coding problems
+- Error message interpretation
+- Document and presentation parsing
+- Multi-image context understanding
+
+### Audio Processing
+
+Gemini handles audio transcription and analysis:
+
+```typescript
+// Audio analysis example
+const audioPart = {
+  inlineData: {
+    data: audioData.toString("base64"),
+    mimeType: "audio/mp3"
+  }
+}
+```
+
+**Supported Formats:**
+- MP3 audio files
+- Base64-encoded audio streams
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="API Key Management">
+    - Use separate API keys for development and production
+    - Set up fallback keys to handle rate limits
+    - Monitor usage in Google AI Studio
+    - Rotate keys periodically for security
+  </Accordion>
+  
+  <Accordion title="Rate Limit Optimization">
+    - Configure `GEMINI_FALLBACK_API_KEY` for automatic failover
+    - Monitor console logs for rate limit warnings
+    - Consider Ollama for high-volume local usage
+  </Accordion>
+  
+  <Accordion title="Error Monitoring">
+    Watch for these console messages:
+    
+    ```bash
+    # Success
+    [LLMHelper] Using Google Gemini
+    
+    # Fallback activated
+    [LLMHelper] Rate limit hit, switching to fallback API key...
+    
+    # Retry attempt
+    [LLMHelper] Model overloaded, retrying in 1000ms... (attempt 1/3)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Voice Features
+
+<Note>
+  Voice features **always** use Gemini, even when other providers are configured for text chat.
+</Note>
+
+Cluely uses a dedicated Gemini client for voice operations:
+
+```typescript
+// Separate client for voice (source/electron/LLMHelper.ts:36)
+private geminiVoiceClient: GoogleGenAI | null = null
+```
+
+This ensures reliable voice transcription and response generation regardless of your primary AI provider.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="API Key Not Found">
+    **Error**: `Either provide Gemini API key, enable Ollama mode, enable K2 Think, or provide OpenRouter API key`
+    
+    **Solution**:
+    1. Verify `.env` file exists in project root
+    2. Check `GEMINI_API_KEY` is set correctly
+    3. Restart the application after updating `.env`
+  </Accordion>
+  
+  <Accordion title="Rate Limit Errors">
+    **Error**: `429` or `RATE_LIMIT_EXCEEDED`
+    
+    **Solution**:
+    1. Set up `GEMINI_FALLBACK_API_KEY` in `.env`
+    2. Wait for quota to reset (usually within minutes)
+    3. Consider upgrading to higher tier in Google AI Studio
+  </Accordion>
+  
+  <Accordion title="Empty Responses">
+    **Error**: Voice or image analysis returns empty results
+    
+    **Solution**:
+    1. Check API key has sufficient quota
+    2. Verify image format is supported (PNG recommended)
+    3. Ensure audio is in MP3 format
+    4. Check console for detailed error messages
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Ollama Setup" icon="server" href="/ai-providers/ollama">
+    Configure local AI for privacy-first usage
+  </Card>
+  <Card title="OpenRouter Setup" icon="router" href="/ai-providers/openrouter">
+    Access multiple AI models through one API
+  </Card>
+</CardGroup>

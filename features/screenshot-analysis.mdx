@@ -1,0 +1,206 @@
+---
+title: Screenshot analysis
+description: Capture and analyze screenshots with AI-powered vision understanding
+---
+
+Cluely's screenshot analysis feature allows you to instantly capture your screen and get AI-powered insights, code solutions, and contextual answers based on what's visible.
+
+## How it works
+
+The screenshot system operates through a multi-stage pipeline:
+
+<Steps>
+  <Step title="Capture">
+    When you press `Cmd/Ctrl+H`, Cluely temporarily hides its window, captures your entire screen, and stores the image in your app data directory.
+  </Step>
+  
+  <Step title="Queue management">
+    Screenshots are automatically added to a queue (max 5 images). When the queue is full, the oldest screenshot is removed to make room for new captures.
+  </Step>
+  
+  <Step title="AI analysis">
+    Press `Cmd/Ctrl+Enter` to process screenshots. The AI analyzes the image content using vision models to extract problems, code, or questions.
+  </Step>
+  
+  <Step title="Response generation">
+    Based on the analysis, Cluely generates contextual solutions, code suggestions, or explanations tailored to what was captured.
+  </Step>
+</Steps>
+
+## Screenshot capture
+
+### Automatic window hiding
+
+Before capturing a screenshot, Cluely automatically hides its main window to ensure a clean capture:
+
+```typescript
+export class ScreenshotHelper {
+  public async takeScreenshot(
+    hideMainWindow: () => void,
+    showMainWindow: () => void
+  ): Promise<string> {
+    try {
+      hideMainWindow()
+      // Add a small delay to ensure window is hidden
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const screenshotPath = path.join(this.screenshotDir, `${uuidv4()}.png`)
+      await screenshot({ filename: screenshotPath })
+      
+      this.screenshotQueue.push(screenshotPath)
+      return screenshotPath
+    } finally {
+      showMainWindow()
+    }
+  }
+}
+```
+
+### Storage locations
+
+Screenshots are stored in two separate directories:
+
+- **Queue screenshots**: `userData/screenshots/` - Main analysis queue
+- **Debug screenshots**: `userData/extra_screenshots/` - Additional context for debugging
+
+Both directories support a maximum of 5 images with automatic cleanup of older files.
+
+## Queue management
+
+### Maximum queue size
+
+The screenshot queue maintains a fixed size limit:
+
+```typescript
+private readonly MAX_SCREENSHOTS = 5
+
+if (this.screenshotQueue.length > this.MAX_SCREENSHOTS) {
+  const removedPath = this.screenshotQueue.shift()
+  if (removedPath) {
+    await fs.promises.unlink(removedPath)
+  }
+}
+```
+
+<Note>
+When the queue reaches 5 screenshots, the oldest image is automatically deleted both from memory and disk to prevent storage buildup.
+</Note>
+
+### Clearing queues
+
+You can clear all screenshots at once using `Cmd/Ctrl+R`:
+
+- Cancels ongoing API requests
+- Deletes all queued screenshots from disk
+- Resets the view to the queue state
+- Clears both main and debug screenshot queues
+
+## AI vision analysis
+
+### Content detection
+
+The AI automatically detects the type of content in your screenshot:
+
+1. **Coding/programming questions** - Provides optimized and brute force solutions
+2. **Code snippets with bugs** - Identifies and fixes issues with minimal changes
+3. **Aptitude/reasoning questions** - Shows step-by-step solutions
+4. **Theoretical/conceptual questions** - Gives clear explanations
+5. **Technical interview questions** - Structured answers with examples
+6. **Multiple choice questions** - Identifies correct answer with reasoning
+
+### Analysis workflow
+
+When you process screenshots (electron/ProcessingHelper.ts:55):
+
+```typescript
+public async processScreenshots(): Promise<void> {
+  const screenshotQueue = this.appState.getScreenshotHelper().getScreenshotQueue()
+  
+  if (screenshotQueue.length === 0) {
+    mainWindow.webContents.send(PROCESSING_EVENTS.NO_SCREENSHOTS)
+    return
+  }
+  
+  const lastPath = screenshotQueue[screenshotQueue.length - 1]
+  const metadata = this.appState.getScreenshotMetadata(lastPath)
+  const imageResult = await this.llmHelper.analyzeImageFile(lastPath, metadata?.question)
+  
+  // Extract problem and generate solution
+  const problemInfo = {
+    problem_statement: imageResult.text,
+    // ... additional context
+  }
+  
+  mainWindow.webContents.send(PROCESSING_EVENTS.PROBLEM_EXTRACTED, problemInfo)
+}
+```
+
+### Adding context to screenshots
+
+You can attach a question or context to any screenshot to guide the AI analysis:
+
+```typescript
+window.electronAPI.setScreenshotQuestion(path, "What optimization can be applied?")
+```
+
+This metadata helps the AI provide more targeted and relevant responses.
+
+## Debug mode
+
+After receiving an initial solution, you can capture additional screenshots to debug or refine the answer:
+
+<Steps>
+  <Step title="Switch to debug mode">
+    After processing initial screenshots, Cluely switches to "solutions" view
+  </Step>
+  
+  <Step title="Capture debug screenshots">
+    Take new screenshots (they go to the debug queue)
+  </Step>
+  
+  <Step title="Process debug images">
+    The AI compares the original problem, current solution, and new debug screenshots to provide refined answers
+  </Step>
+</Steps>
+
+```typescript
+const debugResult = await this.llmHelper.debugSolutionWithImages(
+  problemInfo,
+  currentCode,
+  extraScreenshotQueue
+)
+```
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Capture clear screenshots">
+    - Ensure text is readable and not blurred
+    - Include all relevant context in a single capture when possible
+    - Avoid capturing with overlapping windows
+  </Accordion>
+  
+  <Accordion title="Use the queue strategically">
+    - Capture up to 5 related screenshots for comprehensive context
+    - Clear the queue (`Cmd/Ctrl+R`) before starting a new problem
+    - Add questions to screenshots for more precise AI responses
+  </Accordion>
+  
+  <Accordion title="Leverage debug mode">
+    - After getting an initial solution, capture error messages or test results
+    - Use debug screenshots to show the AI what's not working
+    - Process debug images to get refined solutions
+  </Accordion>
+</AccordionGroup>
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl+H` | Take screenshot and auto-process |
+| `Cmd/Ctrl+Enter` | Process queued screenshots |
+| `Cmd/Ctrl+R` | Clear queues and reset view |
+
+<Info>
+Screenshots are automatically processed when captured with `Cmd/Ctrl+H`, so you'll get instant AI analysis without needing to press Enter separately.
+</Info>

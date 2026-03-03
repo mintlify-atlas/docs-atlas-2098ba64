@@ -1,0 +1,373 @@
+---
+title: Audio intelligence
+description: Process audio recordings and get AI-powered transcriptions and analysis
+---
+
+Cluely's audio intelligence feature allows you to record voice memos, upload audio files, and get instant AI-powered transcriptions and contextual responses.
+
+## How it works
+
+Audio processing in Cluely follows a sophisticated multi-step pipeline:
+
+<Steps>
+  <Step title="Audio capture">
+    Record audio directly in Cluely or upload audio files (MP3, WAV)
+  </Step>
+  
+  <Step title="Transcription">
+    AI automatically transcribes the audio to text using Google's Gemini models
+  </Step>
+  
+  <Step title="Interpretation">
+    The transcript is analyzed to extract intent, context, and expected outcomes
+  </Step>
+  
+  <Step title="Response generation">
+    A contextual response is generated based on the interpreted request
+  </Step>
+</Steps>
+
+## Recording audio
+
+### Voice recording flow
+
+When you record audio in Cluely, the audio is processed through the voice pipeline:
+
+```typescript
+public async processVoiceRecording(data: string, mimeType: string) {
+  const transcriptResult = await this.llmHelper.analyzeAudioFromBase64(data, mimeType)
+  const interpretation = await this.llmHelper.interpretVoiceTranscript(transcriptResult.text)
+  const voiceAnswer = await this.llmHelper.generateVoiceResponse(
+    transcriptResult.text, 
+    interpretation
+  )
+  
+  return {
+    transcript: transcriptResult.text,
+    interpretation,
+    answer: voiceAnswer
+  }
+}
+```
+
+### Supported formats
+
+Cluely supports multiple audio formats:
+
+- **MP3** (`audio/mpeg`) - Compressed audio, smaller file size
+- **WAV** (`audio/wav`) - Uncompressed audio, higher quality
+
+<Info>
+Audio files are automatically detected when added to the screenshot queue. If the last item ends with `.mp3` or `.wav`, it's processed as audio instead of an image.
+</Info>
+
+## Transcription
+
+### How transcription works
+
+Audio is sent to Gemini's multimodal API for transcription:
+
+```typescript
+public async analyzeAudioFromBase64(data: string, mimeType: string) {
+  const client = await this.getGeminiClient()
+  const audioPart = {
+    inlineData: {
+      data,
+      mimeType
+    }
+  }
+  
+  const prompt = `${this.systemPrompt}
+
+Describe this audio clip in a short, concise answer. 
+In addition to your main answer, suggest several possible actions 
+or responses the user could take next based on the audio.`
+  
+  const result = await this.generateContentWithRetry([
+    { parts: [{ text: prompt }, audioPart] }
+  ])
+  
+  return { text: result.candidates[0].content.parts[0].text, timestamp: Date.now() }
+}
+```
+
+### Accuracy
+
+Transcription quality depends on:
+
+- **Audio quality** - Clear recordings transcribe better
+- **Background noise** - Minimize ambient sound
+- **Speaking clarity** - Speak at a normal pace
+- **Language** - English is best supported
+
+<Warning>
+Audio transcription requires a Gemini API key. It's not available with Ollama or other local models since they don't support audio input.
+</Warning>
+
+## Voice interpretation
+
+### Understanding intent
+
+After transcription, Cluely analyzes the transcript to understand what you're asking for:
+
+```typescript
+public async interpretVoiceTranscript(transcript: string) {
+  const prompt = `The user spoke: "${transcript}"
+
+Interpret the request and respond with JSON:
+{
+  "problem_statement": "Concise restatement of the user's request",
+  "context": "Relevant background or assumptions",
+  "expected_outcome": "What result the user wants",
+  "key_requirements": ["Must-have requirements"],
+  "clarifications_needed": ["Questions if anything is ambiguous"],
+  "suggested_responses": ["High-level solution directions"],
+  "reasoning": "How you interpreted the request"
+}`
+  
+  const result = await this.generateContentWithRetry([{ parts: [{ text: prompt }] }])
+  return JSON.parse(this.cleanJsonResponse(result.candidates[0].content.parts[0].text))
+}
+```
+
+### Interpretation output
+
+The interpretation provides structured understanding:
+
+```json
+{
+  "problem_statement": "Explain how to implement binary search in JavaScript",
+  "context": "User wants a code example with explanation",
+  "expected_outcome": "Working implementation with time complexity analysis",
+  "key_requirements": [
+    "Must be in JavaScript",
+    "Should include comments",
+    "Explain time complexity"
+  ],
+  "clarifications_needed": [],
+  "suggested_responses": [
+    "Provide iterative implementation",
+    "Provide recursive implementation",
+    "Include example usage"
+  ],
+  "reasoning": "User is learning algorithms and needs a practical example"
+}
+```
+
+## Response generation
+
+### Contextual answers
+
+Based on the interpretation, Cluely generates a targeted response:
+
+```typescript
+public async generateVoiceResponse(transcript: string, interpretation?: any): Promise<string> {
+  const reasoning = interpretation?.reasoning 
+    ? `\nReasoning: ${interpretation.reasoning}` 
+    : ""
+  const outcome = interpretation?.expected_outcome 
+    ? `\nExpected outcome: ${interpretation.expected_outcome}` 
+    : ""
+  const requirements = Array.isArray(interpretation?.key_requirements)
+    ? `\nKey requirements: ${interpretation.key_requirements.join("; ")}` 
+    : ""
+  
+  const prompt = `You are Wingman AI responding to: "${transcript}"${outcome}${requirements}${reasoning}
+
+Provide a direct, helpful answer. Focus on delivering the explanation or result 
+they asked for. Keep it concise, practical, and on-topic.`
+  
+  const result = await this.generateContentWithRetry([{ parts: [{ text: prompt }] }])
+  return result.candidates[0].content.parts[0].text
+}
+```
+
+### Response quality
+
+Responses are optimized for:
+
+- **Relevance** - Directly addresses the spoken request
+- **Completeness** - Includes all key requirements from interpretation
+- **Clarity** - Uses Markdown formatting for readability
+- **Actionability** - Provides concrete next steps when applicable
+
+## Audio file processing
+
+### Upload and process
+
+You can process existing audio files:
+
+```typescript
+// From file path
+const result = await window.electronAPI.analyzeAudioFile("/path/to/audio.mp3")
+
+// From base64 data
+const result = await window.electronAPI.analyzeAudioBase64(
+  base64Data,
+  "audio/mpeg"
+)
+```
+
+### Processing workflow
+
+When an audio file is in the queue (electron/ProcessingHelper.ts:69):
+
+```typescript
+const allPaths = this.appState.getScreenshotHelper().getScreenshotQueue()
+const lastPath = allPaths[allPaths.length - 1]
+
+if (lastPath.endsWith('.mp3') || lastPath.endsWith('.wav')) {
+  const audioBuffer = await fs.promises.readFile(lastPath)
+  const extension = path.extname(lastPath).toLowerCase()
+  const mimeType = extension === '.wav' ? 'audio/wav' : 'audio/mpeg'
+  
+  await this.processVoiceRecording(
+    audioBuffer.toString('base64'), 
+    mimeType
+  )
+}
+```
+
+## Use cases
+
+<CardGroup cols={2}>
+  <Card title="Code explanations" icon="code">
+    Record yourself describing a coding problem and get solutions
+  </Card>
+  
+  <Card title="Quick notes" icon="microphone">
+    Capture ideas verbally and get structured summaries
+  </Card>
+  
+  <Card title="Learning assistance" icon="book">
+    Ask questions out loud and receive detailed explanations
+  </Card>
+  
+  <Card title="Debugging help" icon="bug">
+    Describe an error verbally and get troubleshooting steps
+  </Card>
+</CardGroup>
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Record in a quiet environment">
+    Background noise can reduce transcription accuracy:
+    - Use headphones with a microphone for better isolation
+    - Close windows and doors to minimize ambient sound
+    - Turn off fans or noisy equipment
+  </Accordion>
+  
+  <Accordion title="Speak clearly and naturally">
+    Optimal speaking technique:
+    - Use your normal speaking voice (don't whisper or shout)
+    - Speak at a moderate pace
+    - Pronounce technical terms carefully
+    - Pause between sentences
+  </Accordion>
+  
+  <Accordion title="Structure your request">
+    For best results, organize your spoken input:
+    1. State the problem clearly
+    2. Mention any constraints or requirements
+    3. Specify the expected format (code, explanation, steps)
+  </Accordion>
+  
+  <Accordion title="Keep recordings focused">
+    - Stay on topic for each recording
+    - Keep recordings under 1-2 minutes when possible
+    - Record separate clips for unrelated questions
+  </Accordion>
+</AccordionGroup>
+
+## Technical details
+
+### Audio encoding
+
+Audio is encoded as base64 for transmission:
+
+```typescript
+const audioData = await fs.promises.readFile(audioPath)
+const audioPart = {
+  inlineData: {
+    data: audioData.toString("base64"),
+    mimeType: "audio/mp3"
+  }
+}
+```
+
+### Model requirements
+
+Audio processing requires Gemini API access:
+
+```typescript
+private async getGeminiClient(): Promise<GoogleGenAI> {
+  const apiKey = this.resolveGeminiApiKey()
+  if (!apiKey) {
+    throw new Error("Gemini API key is required for voice features")
+  }
+  
+  if (!this.geminiVoiceClient) {
+    this.geminiVoiceClient = new GoogleGenAI({ apiKey })
+  }
+  return this.geminiVoiceClient
+}
+```
+
+<Note>
+Even if you're using Ollama or OpenRouter for text/vision, voice features always use Gemini since it's the only provider with audio understanding capabilities.
+</Note>
+
+## IPC handlers
+
+The main process exposes these audio-related IPC handlers:
+
+```typescript
+// Analyze audio from base64 data
+ipcMain.handle("analyze-audio-base64", async (event, data: string, mimeType: string) => {
+  return await appState.processingHelper.processAudioBase64(data, mimeType)
+})
+
+// Process voice recording with full interpretation
+ipcMain.handle("process-voice-recording", async (_, data: string, mimeType: string) => {
+  return await appState.processingHelper.processVoiceRecording(data, mimeType)
+})
+
+// Analyze audio file from path
+ipcMain.handle("analyze-audio-file", async (event, path: string) => {
+  return await appState.processingHelper.processAudioFile(path)
+})
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Transcription returns empty text">
+    **Causes**:
+    - Audio file is corrupted or empty
+    - Audio format not supported
+    - API key issue
+    
+    **Solutions**:
+    - Verify the audio file plays correctly
+    - Check that GEMINI_API_KEY is set
+    - Try re-recording with better quality
+  </Accordion>
+  
+  <Accordion title="Error: Gemini API key required">
+    **Cause**: No Gemini API key configured
+    
+    **Solution**: Add to your `.env` file:
+    ```bash
+    GEMINI_API_KEY=your_api_key_here
+    ```
+  </Accordion>
+  
+  <Accordion title="Poor transcription quality">
+    **Improvements**:
+    - Record in a quieter environment
+    - Use an external microphone instead of built-in
+    - Speak more slowly and clearly
+    - Ensure audio levels aren't too low or distorted
+  </Accordion>
+</AccordionGroup>

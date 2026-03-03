@@ -1,0 +1,349 @@
+---
+title: Keyboard shortcuts
+description: Complete reference of Cluely's global keyboard shortcuts
+---
+
+Cluely is designed for keyboard-first workflows. All major features are accessible via global shortcuts that work anywhere on your system.
+
+## Global shortcuts reference
+
+### Core actions
+
+<CodeGroup>
+```bash macOS
+Cmd+Shift+Space    # Show/center Cluely window
+Cmd+B              # Toggle window visibility
+Cmd+H              # Take screenshot + auto-process
+Cmd+Enter          # Process queued screenshots
+Cmd+R              # Clear queues and reset
+```
+
+```bash Windows/Linux
+Ctrl+Shift+Space   # Show/center Cluely window
+Ctrl+B             # Toggle window visibility
+Ctrl+H             # Take screenshot + auto-process
+Ctrl+Enter         # Process queued screenshots
+Ctrl+R             # Clear queues and reset
+```
+</CodeGroup>
+
+### Window positioning
+
+<CodeGroup>
+```bash macOS
+Cmd+Left           # Move window to left side
+Cmd+Right          # Move window to right side
+Cmd+Up             # Move window up
+Cmd+Down           # Move window down
+```
+
+```bash Windows/Linux
+Ctrl+Left          # Move window to left side
+Ctrl+Right         # Move window to right side
+Ctrl+Up            # Move window up
+Ctrl+Down          # Move window down
+```
+</CodeGroup>
+
+## Detailed shortcuts
+
+### Show/center window
+
+**Shortcut**: `Cmd/Ctrl+Shift+Space`
+
+Brings Cluely to the front and centers it on your current screen.
+
+```typescript
+globalShortcut.register("CommandOrControl+Shift+Space", () => {
+  this.appState.centerAndShowWindow()
+})
+```
+
+<Info>
+This is the primary shortcut for accessing Cluely. It works from any application and brings the window to focus.
+</Info>
+
+### Toggle visibility
+
+**Shortcut**: `Cmd/Ctrl+B`
+
+Quickly show or hide the Cluely window without changing its position.
+
+```typescript
+globalShortcut.register("CommandOrControl+B", () => {
+  this.appState.toggleMainWindow()
+  
+  const mainWindow = this.appState.getMainWindow()
+  if (mainWindow && !this.appState.isVisible()) {
+    // On macOS, force window to front
+    if (process.platform === "darwin") {
+      mainWindow.setAlwaysOnTop(true, "normal")
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setAlwaysOnTop(true, "floating")
+        }
+      }, 100)
+    }
+  }
+})
+```
+
+<Note>
+On macOS, this shortcut temporarily adjusts the window's always-on-top level to ensure it appears above other windows.
+</Note>
+
+### Screenshot capture
+
+**Shortcut**: `Cmd/Ctrl+H`
+
+Captures a screenshot and automatically processes it with AI.
+
+```typescript
+globalShortcut.register("CommandOrControl+H", async () => {
+  const mainWindow = this.appState.getMainWindow()
+  if (mainWindow) {
+    try {
+      const screenshotPath = await this.appState.takeScreenshot()
+      const preview = await this.appState.getImagePreview(screenshotPath)
+      
+      mainWindow.webContents.send("screenshot-taken", {
+        path: screenshotPath,
+        preview
+      })
+      
+      // Automatically process the screenshot
+      await this.appState.processingHelper.processScreenshots()
+    } catch (error) {
+      console.error("Error capturing screenshot:", error)
+    }
+  }
+})
+```
+
+**Workflow**:
+1. Hides Cluely window
+2. Waits 100ms for window to hide
+3. Captures entire screen
+4. Shows window again
+5. Automatically processes screenshot with AI
+
+<Warning>
+This shortcut conflicts with "Hide Application" on macOS. You may need to disable the system shortcut in System Preferences → Keyboard → Shortcuts.
+</Warning>
+
+### Process screenshots
+
+**Shortcut**: `Cmd/Ctrl+Enter`
+
+Manually triggers processing of queued screenshots.
+
+```typescript
+globalShortcut.register("CommandOrControl+Enter", async () => {
+  await this.appState.processingHelper.processScreenshots()
+})
+```
+
+**When to use**:
+- You've captured multiple screenshots and want to process them together
+- You've added context/questions to screenshots before processing
+- You're in debug mode and want to process additional screenshots
+
+### Reset and clear
+
+**Shortcut**: `Cmd/Ctrl+R`
+
+Resets Cluely to its initial state.
+
+```typescript
+globalShortcut.register("CommandOrControl+R", () => {
+  // Cancel ongoing API requests
+  this.appState.processingHelper.cancelOngoingRequests()
+  
+  // Clear both screenshot queues
+  this.appState.clearQueues()
+  
+  // Update view state to 'queue'
+  this.appState.setView("queue")
+  
+  // Notify renderer to switch view
+  const mainWindow = this.appState.getMainWindow()
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("reset-view")
+  }
+})
+```
+
+**What gets reset**:
+- All queued screenshots (deleted from disk)
+- Debug screenshots (deleted from disk)
+- Ongoing API requests (cancelled)
+- View state (back to queue)
+- React Query cache (invalidated)
+
+<Info>
+Use this shortcut to start fresh when working on a new problem or if you want to clear context.
+</Info>
+
+## Window movement shortcuts
+
+### Move left
+
+**Shortcut**: `Cmd/Ctrl+Left`
+
+Moves the Cluely window to the left side of your screen.
+
+```typescript
+globalShortcut.register("CommandOrControl+Left", () => {
+  this.appState.moveWindowLeft()
+})
+```
+
+### Move right
+
+**Shortcut**: `Cmd/Ctrl+Right`
+
+Moves the window to the right side.
+
+```typescript
+globalShortcut.register("CommandOrControl+Right", () => {
+  this.appState.moveWindowRight()
+})
+```
+
+### Move up
+
+**Shortcut**: `Cmd/Ctrl+Up`
+
+Moves the window up on your screen.
+
+```typescript
+globalShortcut.register("CommandOrControl+Up", () => {
+  this.appState.moveWindowUp()
+})
+```
+
+### Move down
+
+**Shortcut**: `Cmd/Ctrl+Down`
+
+Moves the window down.
+
+```typescript
+globalShortcut.register("CommandOrControl+Down", () => {
+  this.appState.moveWindowDown()
+})
+```
+
+## IPC shortcuts
+
+These shortcuts are available through the IPC API for use in the renderer process:
+
+```typescript
+// Trigger shortcuts from renderer
+await window.electronAPI.moveWindowLeft()
+await window.electronAPI.moveWindowRight()
+await window.electronAPI.moveWindowUp()
+await window.electronAPI.moveWindowDown()
+await window.electronAPI.centerAndShowWindow()
+await window.electronAPI.toggleWindow()
+```
+
+## Shortcut registration
+
+All global shortcuts are registered at app startup:
+
+```typescript
+export class ShortcutsHelper {
+  public registerGlobalShortcuts(): void {
+    // Register all shortcuts...
+  }
+}
+
+// Cleanup on quit
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll()
+})
+```
+
+<Note>
+Shortcuts are automatically unregistered when the app quits to avoid conflicts with other applications.
+</Note>
+
+## Platform differences
+
+### macOS
+
+- Uses `Command` key for shortcuts
+- Includes special always-on-top handling for toggle visibility
+- May conflict with system shortcuts (especially `Cmd+H`)
+
+### Windows/Linux
+
+- Uses `Control` key for shortcuts
+- Standard window behavior without special z-order handling
+- Generally fewer conflicts with system shortcuts
+
+## Customization
+
+Shortcuts are currently hardcoded in `electron/shortcuts.ts`. To customize:
+
+1. Edit the shortcut registration in `ShortcutsHelper.registerGlobalShortcuts()`
+2. Rebuild the application
+3. Test for conflicts with system shortcuts
+
+```typescript
+// Example: Change screenshot to Cmd+Shift+S
+globalShortcut.register("CommandOrControl+Shift+S", async () => {
+  // Screenshot logic...
+})
+```
+
+<Warning>
+Changing shortcuts requires rebuilding the application. Future versions may support user-configurable shortcuts.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Shortcuts not working">
+    **Possible causes**:
+    - Another app is using the same shortcut
+    - macOS accessibility permissions not granted
+    - Electron's globalShortcut module failed to register
+    
+    **Solutions**:
+    - Check System Preferences → Keyboard → Shortcuts for conflicts
+    - Grant accessibility permissions to Cluely
+    - Restart the application
+    - Check console for registration errors
+  </Accordion>
+  
+  <Accordion title="Cmd+H hides the app instead of taking screenshot">
+    **Cause**: macOS system shortcut conflict
+    
+    **Solutions**:
+    - Disable "Hide [App]" in System Preferences → Keyboard → Shortcuts → App Shortcuts
+    - Or modify Cluely's screenshot shortcut to use a different key combination
+  </Accordion>
+  
+  <Accordion title="Window doesn't come to front">
+    **Solutions**:
+    - Try using `Cmd/Ctrl+Shift+Space` instead of `Cmd/Ctrl+B`
+    - On macOS, ensure Cluely has accessibility permissions
+    - Check if another window is set to always-on-top
+  </Accordion>
+</AccordionGroup>
+
+## Quick reference table
+
+| Action | macOS | Windows/Linux | Description |
+|--------|-------|---------------|-------------|
+| Show window | `Cmd+Shift+Space` | `Ctrl+Shift+Space` | Center and show Cluely |
+| Toggle visibility | `Cmd+B` | `Ctrl+B` | Hide/show window |
+| Screenshot | `Cmd+H` | `Ctrl+H` | Capture + auto-process |
+| Process queue | `Cmd+Enter` | `Ctrl+Enter` | Manually process screenshots |
+| Reset | `Cmd+R` | `Ctrl+R` | Clear queues and reset |
+| Move left | `Cmd+Left` | `Ctrl+Left` | Reposition window |
+| Move right | `Cmd+Right` | `Ctrl+Right` | Reposition window |
+| Move up | `Cmd+Up` | `Ctrl+Up` | Reposition window |
+| Move down | `Cmd+Down` | `Ctrl+Down` | Reposition window |

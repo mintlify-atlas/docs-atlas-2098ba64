@@ -1,0 +1,504 @@
+---
+title: Application Architecture
+description: Understanding Cluely's Electron + React + TypeScript architecture and technical stack
+---
+
+Cluely is built as a modern desktop application using Electron, React, and TypeScript. This architecture enables a powerful AI assistant that runs locally on your machine with cross-platform support.
+
+## Tech Stack
+
+<CardGroup cols={2}>
+  <Card title="Frontend" icon="react">
+    - **React 18** with TypeScript
+    - **Vite** for fast development
+    - **TailwindCSS** for styling
+    - **Radix UI** for accessible components
+  </Card>
+  
+  <Card title="Desktop Runtime" icon="window">
+    - **Electron 33** for native capabilities
+    - **IPC** for process communication
+    - **Global shortcuts** and window management
+    - **System tray** integration
+  </Card>
+  
+  <Card title="AI & Processing" icon="brain">
+    - **Google Gemini** (cloud AI)
+    - **Ollama** (local AI models)
+    - **Tesseract.js** (OCR)
+    - **Screenshot-desktop** for captures
+  </Card>
+  
+  <Card title="Build & Development" icon="hammer">
+    - **TypeScript 5.6** for type safety
+    - **electron-builder** for packaging
+    - **concurrently** for dev workflow
+    - **Sharp** for image processing
+  </Card>
+</CardGroup>
+
+## Electron Architecture
+
+Cluely follows the standard Electron multi-process architecture with a main process and renderer process communicating via IPC.
+
+### Main Process
+
+The main process (`electron/main.ts`) orchestrates the entire application through a singleton `AppState` class:
+
+```typescript
+export class AppState {
+  private windowHelper: WindowHelper
+  private screenshotHelper: ScreenshotHelper
+  public shortcutsHelper: ShortcutsHelper
+  public processingHelper: ProcessingHelper
+  private tray: Tray | null = null
+  
+  // View management
+  private view: "queue" | "solutions" = "queue"
+  
+  // Problem and screenshot state
+  private problemInfo: any | null = null
+  private screenshotMetadata: Map<string, { question: string }>
+}
+```
+
+**Key Responsibilities:**
+- Window lifecycle management
+- Screenshot capture and storage
+- Global keyboard shortcuts
+- AI processing coordination
+- System tray integration
+
+### Helper Classes
+
+The main process delegates functionality to specialized helper classes:
+
+<Accordion title="WindowHelper (electron/WindowHelper.ts)">
+  Manages the main application window with advanced positioning and visibility controls.
+  
+  **Features:**
+  - Always-on-top floating window
+  - Frameless, transparent design
+  - Dynamic resizing based on content
+  - Keyboard-based window movement
+  - Cross-platform full-screen compatibility
+  
+  **Key Methods:**
+  ```typescript
+  createWindow(): void
+  hideMainWindow(): void
+  showMainWindow(): void
+  toggleMainWindow(): void
+  setWindowDimensions(width: number, height: number): void
+  moveWindowLeft/Right/Up/Down(): void
+  centerAndShowWindow(): void
+  ```
+</Accordion>
+
+<Accordion title="ScreenshotHelper (electron/ScreenshotHelper.ts)">
+  Handles screenshot capture, storage, and queue management.
+  
+  **Features:**
+  - Dual queue system (main queue and extra screenshots)
+  - Automatic cleanup (max 5 screenshots per queue)
+  - Base64 preview generation
+  - Screenshot metadata tracking
+  
+  **Storage Locations:**
+  - Main queue: `{userData}/screenshots/`
+  - Extra queue: `{userData}/extra_screenshots/`
+  
+  **Implementation:**
+  ```typescript
+  public async takeScreenshot(
+    hideMainWindow: () => void,
+    showMainWindow: () => void
+  ): Promise<string> {
+    hideMainWindow()
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    const screenshotPath = path.join(
+      this.screenshotDir, 
+      `${uuidv4()}.png`
+    )
+    await screenshot({ filename: screenshotPath })
+    
+    this.screenshotQueue.push(screenshotPath)
+    if (this.screenshotQueue.length > this.MAX_SCREENSHOTS) {
+      // Remove oldest screenshot
+    }
+    
+    showMainWindow()
+    return screenshotPath
+  }
+  ```
+</Accordion>
+
+<Accordion title="LLMHelper (electron/LLMHelper.ts)">
+  Manages AI model integrations and provides a unified interface for multiple LLM providers.
+  
+  **Supported Providers:**
+  - **Google Gemini** (gemini-2.5-flash)
+  - **Ollama** (local models like llama3.2, codellama, mistral)
+  - **OpenRouter** (various models)
+  - **K2 Think V2** (high-reasoning AI)
+  
+  **Key Features:**
+  - Vision API for screenshot analysis
+  - Audio transcription and analysis
+  - Rate limit handling with fallback API keys
+  - Retry logic with exponential backoff
+  - Local OCR with Tesseract.js for privacy
+  
+  **Core Methods:**
+  ```typescript
+  extractProblemFromImages(imagePaths: string[])
+  generateSolution(problemInfo: any)
+  debugSolutionWithImages(problemInfo, currentCode, debugImagePaths)
+  analyzeImageFile(imagePath: string, userQuestion?: string)
+  analyzeAudioFile(audioPath: string)
+  chatWithGemini(message: string): Promise<string>
+  ```
+</Accordion>
+
+<Accordion title="ShortcutsHelper (electron/shortcuts.ts)">
+  Registers and manages global keyboard shortcuts that work across the entire system.
+  
+  **Default Shortcuts:**
+  - `Cmd/Ctrl + Shift + Space` - Toggle window visibility
+  - `Cmd/Ctrl + H` - Take screenshot
+  - `Cmd/Ctrl + R` - Reset/clear queues
+  - `Cmd/Ctrl + Arrow Keys` - Move window
+</Accordion>
+
+<Accordion title="ProcessingHelper (electron/ProcessingHelper.ts)">
+  Orchestrates the AI processing pipeline from screenshot to solution.
+  
+  **Processing Events:**
+  - `UNAUTHORIZED` - API key issues
+  - `NO_SCREENSHOTS` - No screenshots in queue
+  - `INITIAL_START` - Starting problem extraction
+  - `PROBLEM_EXTRACTED` - Problem successfully parsed
+  - `SOLUTION_SUCCESS` - Solution generated
+  - `DEBUG_START/SUCCESS/ERROR` - Debugging workflow
+</Accordion>
+
+### IPC Communication
+
+The main and renderer processes communicate via IPC handlers defined in `electron/ipcHandlers.ts`:
+
+<CodeGroup>
+```typescript Main Process (IPC Handlers)
+ipcMain.handle("take-screenshot", async () => {
+  const screenshotPath = await appState.takeScreenshot()
+  const preview = await appState.getImagePreview(screenshotPath)
+  return { path: screenshotPath, preview }
+})
+
+ipcMain.handle("get-screenshots", async () => {
+  const previews = await Promise.all(
+    appState.getScreenshotQueue().map(async (path) => ({
+      path,
+      preview: await appState.getImagePreview(path),
+      question: appState.getScreenshotMetadata(path)?.question || ""
+    }))
+  )
+  return previews
+})
+
+ipcMain.handle("analyze-image-file", async (event, path, question) => {
+  return await appState.processingHelper
+    .getLLMHelper()
+    .analyzeImageFile(path, question)
+})
+```
+
+```typescript Renderer Process (Preload API)
+window.electronAPI = {
+  takeScreenshot: () => ipcRenderer.invoke("take-screenshot"),
+  getScreenshots: () => ipcRenderer.invoke("get-screenshots"),
+  deleteScreenshot: (path) => ipcRenderer.invoke("delete-screenshot", path),
+  analyzeImageFile: (path, question) => 
+    ipcRenderer.invoke("analyze-image-file", path, question),
+  geminiChat: (message) => ipcRenderer.invoke("gemini-chat", message),
+  // Event listeners
+  onScreenshotTaken: (callback) => 
+    ipcRenderer.on("screenshot-taken", callback),
+  onSolutionStart: (callback) => 
+    ipcRenderer.on("processing-initial-start", callback)
+}
+```
+</CodeGroup>
+
+## React Architecture
+
+The renderer process is a React application built with modern patterns.
+
+### Component Structure
+
+```
+src/
+├── App.tsx                      # Root component with view routing
+├── main.tsx                     # React entry point
+├── _pages/
+│   ├── Queue.tsx                # Screenshot queue view
+│   ├── Solutions.tsx            # AI solutions view
+│   └── Debug.tsx                # Debugging view
+├── components/
+│   ├── Queue/
+│   │   ├── QueueCommands.tsx    # Command buttons for queue
+│   │   ├── ScreenshotQueue.tsx  # Screenshot grid display
+│   │   └── ScreenshotItem.tsx   # Individual screenshot card
+│   ├── Solutions/
+│   │   └── SolutionCommands.tsx # Commands for solutions view
+│   └── ui/
+│       ├── toast.tsx            # Toast notifications
+│       ├── dialog.tsx           # Modal dialogs
+│       ├── card.tsx             # Card component
+│       └── ModelSelector.tsx    # LLM model switcher
+└── context/
+    └── AppearanceContext.tsx    # Theme/appearance state
+```
+
+### State Management
+
+<Info>
+Cluely uses **React Query** for server state and **React Context** for UI state, avoiding Redux complexity.
+</Info>
+
+**React Query Usage:**
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,
+      cacheTime: Infinity
+    }
+  }
+})
+
+// In components:
+const { data: screenshots } = useQuery(
+  ["screenshots"],
+  () => window.electronAPI.getScreenshots()
+)
+```
+
+**View State:**
+```typescript
+const [view, setView] = useState<"queue" | "solutions" | "debug">("queue")
+
+// Switching views based on processing events
+window.electronAPI.onSolutionStart(() => {
+  setView("solutions")
+})
+```
+
+### Dynamic Window Sizing
+
+The window automatically resizes based on content:
+
+```typescript
+useEffect(() => {
+  if (!containerRef.current) return
+  
+  const updateHeight = () => {
+    const height = containerRef.current.scrollHeight
+    const width = containerRef.current.scrollWidth
+    window.electronAPI?.updateContentDimensions({ width, height })
+  }
+  
+  const resizeObserver = new ResizeObserver(updateHeight)
+  resizeObserver.observe(containerRef.current)
+  
+  return () => resizeObserver.disconnect()
+}, [view])
+```
+
+## File Structure
+
+<CodeGroup>
+```bash Project Root
+free-cluely/
+├── electron/                 # Main process code
+│   ├── main.ts              # Entry point, AppState singleton
+│   ├── ipcHandlers.ts       # IPC communication handlers
+│   ├── preload.ts           # Preload script for context bridge
+│   ├── WindowHelper.ts      # Window management
+│   ├── ScreenshotHelper.ts  # Screenshot handling
+│   ├── LLMHelper.ts         # AI model integration
+│   ├── ProcessingHelper.ts  # AI processing pipeline
+│   ├── shortcuts.ts         # Global keyboard shortcuts
+│   └── tsconfig.json        # Electron TypeScript config
+├── src/                     # Renderer process (React)
+│   ├── App.tsx
+│   ├── main.tsx
+│   ├── _pages/
+│   ├── components/
+│   └── context/
+├── dist/                    # Vite build output
+├── dist-electron/           # Compiled Electron code
+├── release/                 # electron-builder output
+├── assets/                  # App icons and resources
+└── package.json
+```
+
+```bash User Data Directory
+~/Library/Application Support/Meeting Notes Coder/  # macOS
+%APPDATA%/Meeting Notes Coder/                      # Windows
+~/.config/Meeting Notes Coder/                      # Linux
+
+├── screenshots/             # Main screenshot queue
+│   ├── {uuid}.png
+│   └── {uuid}.png
+└── extra_screenshots/       # Debug/extra screenshots
+    ├── {uuid}.png
+    └── {uuid}.png
+```
+</CodeGroup>
+
+## Key Design Patterns
+
+### Singleton Pattern
+The `AppState` class uses a singleton pattern to maintain global state:
+
+```typescript
+public static getInstance(): AppState {
+  if (!AppState.instance) {
+    AppState.instance = new AppState()
+  }
+  return AppState.instance
+}
+```
+
+### Dependency Injection
+Helper classes receive `AppState` reference for coordinated state management:
+
+```typescript
+const windowHelper = new WindowHelper(appState)
+const processingHelper = new ProcessingHelper(appState)
+```
+
+### Event-Driven Communication
+Renderer receives events from main process for real-time updates:
+
+```typescript
+// Main process sends events
+mainWindow.webContents.send("screenshot-taken", { path, preview })
+mainWindow.webContents.send("processing-initial-start")
+
+// Renderer listens for events
+window.electronAPI.onScreenshotTaken((event, data) => {
+  queryClient.invalidateQueries(["screenshots"])
+})
+```
+
+## Platform-Specific Code
+
+<CodeGroup>
+```typescript macOS
+if (process.platform === "darwin") {
+  this.mainWindow.setVisibleOnAllWorkspaces(true, {
+    visibleOnFullScreen: true
+  })
+  this.mainWindow.setHiddenInMissionControl(true)
+  this.mainWindow.setAlwaysOnTop(true, "floating")
+  this.tray.setTitle('IC')
+}
+```
+
+```typescript Windows/Linux
+if (process.platform === "linux") {
+  if (this.mainWindow.setHasShadow) {
+    this.mainWindow.setHasShadow(false)
+  }
+  this.mainWindow.setFocusable(true)
+}
+
+this.mainWindow.setAlwaysOnTop(true, "screen-saver")
+```
+</CodeGroup>
+
+## Environment Configuration
+
+Cluely supports multiple AI providers configured via `.env`:
+
+```bash
+# Gemini (Cloud)
+GEMINI_API_KEY=your_api_key
+GEMINI_FALLBACK_API_KEY=backup_key
+
+# Ollama (Local)
+USE_OLLAMA=true
+OLLAMA_MODEL=llama3.2
+OLLAMA_URL=http://localhost:11434
+
+# OpenRouter
+OPENROUTER_API_KEY=your_api_key
+OPENROUTER_MODEL=google/gemini-2.5-flash
+
+# K2 Think V2
+K2_THINK_API_KEY=your_api_key
+USE_K2_THINK=true
+```
+
+## Performance Optimizations
+
+<Steps>
+  <Step title="Disable Background Throttling">
+    ```typescript
+    app.commandLine.appendSwitch("disable-background-timer-throttling")
+    ```
+    Ensures the app remains responsive even when in the background.
+  </Step>
+  
+  <Step title="Lazy Loading with React Query">
+    Screenshots and AI responses are cached indefinitely:
+    ```typescript
+    staleTime: Infinity,
+    cacheTime: Infinity
+    ```
+  </Step>
+  
+  <Step title="Efficient Screenshot Storage">
+    - Max 5 screenshots per queue
+    - Automatic cleanup of old screenshots
+    - UUID-based filenames prevent collisions
+  </Step>
+  
+  <Step title="Content-Based Window Sizing">
+    Window dynamically resizes only when content changes, using ResizeObserver for efficiency.
+  </Step>
+</Steps>
+
+## Security Considerations
+
+<Note>
+**Context Isolation**: Enabled by default to prevent renderer from accessing Node.js APIs directly.
+
+```typescript
+webPreferences: {
+  nodeIntegration: true,
+  contextIsolation: true,
+  preload: path.join(__dirname, "preload.js")
+}
+```
+</Note>
+
+**Content Protection:**
+```typescript
+this.mainWindow.setContentProtection(true)
+```
+Prevents screenshots of the Cluely window itself on macOS.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Building the App" href="/development/building" icon="hammer">
+    Learn how to build and run Cluely locally
+  </Card>
+  
+  <Card title="Contributing" href="/development/contributing" icon="code-pull-request">
+    Guidelines for contributing to Cluely
+  </Card>
+</CardGroup>
